@@ -2,3 +2,9 @@ gurobipy
 cvxpy
 numpy
 ipykernel
+pandas
+requests
+geopy
+tqdm
+matplotlib
+seaborn
