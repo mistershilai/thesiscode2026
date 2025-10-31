@@ -24,3 +24,5 @@ conda/
 conda_env/
 __pycache__/
 *.pyc
+priority_antimicrobials_cleaned.numbers
+priority_antimicrobials_estimates.numbers
