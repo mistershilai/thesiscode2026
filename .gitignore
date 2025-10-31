@@ -1,27 +1,12 @@
-# ==============================
-#   SECRETS AND ENVIRONMENT
-# ==============================
-# Protect your Google API key (in any subfolder)
+
 .env
 
-# ==============================
-#   RAW OR SENSITIVE DATA
-# ==============================
-# Any geocoded datasets (contain raw coordinates)
 *geocoded*.csv
-
-# Any raw or intermediate CSVs (not safe to publish)
 census_villages_geocoded.csv
 census_villages_geocoded_google.csv
-
-# Optional: ignore all CSVs by default, then whitelist safe ones
 *.csv
 !distance_matrix.csv       # <-- keep your derived distance matrix
 !aggregated_results.csv    # <-- keep safe analytical outputs if needed
-
-# ==============================
-#   PYTHON / DEVELOPMENT FILES
-# ==============================
 __pycache__/
 *.pyc
 *.pyo
@@ -29,10 +14,12 @@ __pycache__/
 *.log
 *.tmp
 .DS_Store
-
-# ==============================
-#   CHECKPOINTS / OUTPUTS
-# ==============================
-# Any temporary checkpoints from geocoding
 checkpoint.csv
 checkpoints/
+.venv/
+venv/
+env/
+.conda/
+conda_env/
+__pycache__/
+*.pyc
