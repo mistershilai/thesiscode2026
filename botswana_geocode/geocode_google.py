@@ -4,7 +4,7 @@ import requests
 import pandas as pd
 from dotenv import load_dotenv
 
-# load your Google API key securely from .env
+# private Google API key
 load_dotenv()
 API_KEY = os.getenv("GOOGLE_API_KEY")
 if not API_KEY:
