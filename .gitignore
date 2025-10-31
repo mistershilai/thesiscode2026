@@ -19,6 +19,7 @@ checkpoints/
 .venv/
 venv/
 env/
+conda/
 .conda/
 conda_env/
 __pycache__/
