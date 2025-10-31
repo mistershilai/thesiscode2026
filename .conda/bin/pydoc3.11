@@ -1,5 +1,0 @@
-#!/Users/elee/Documents/GitHub/thesiscode2026/.conda/bin/python3.11
-
-import pydoc
-if __name__ == '__main__':
-    pydoc.cli()
