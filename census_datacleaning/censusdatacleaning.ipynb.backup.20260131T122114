@@ -2,7 +2,7 @@
  "cells": [
   {
    "cell_type": "code",
-   "execution_count": 37,
+   "execution_count": null,
    "id": "8aff642a",
    "metadata": {},
    "outputs": [
@@ -10,7 +10,27 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "OK -24.6581357 25.9088474\n"
+      "sys.executable= /Users/elee/Documents/GitHub/thesiscode2026/.venv/bin/python\n",
+      "pandas= 3.0.0\n",
+      "tqdm.version= 4.67.1\n",
+      "tqdm.file= /Users/elee/Documents/GitHub/thesiscode2026/.venv/lib/python3.14/site-packages/tqdm/__init__.py\n",
+      "sys.path[0:5]= ['/Library/Frameworks/Python.framework/Versions/3.14/lib/python314.zip', '/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14', '/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/lib-dynload', '', '/Users/elee/Documents/GitHub/thesiscode2026/.venv/lib/python3.14/site-packages']\n",
+      "pip show tqdm:\n",
+      "Name: tqdm\n",
+      "Version: 4.67.2\n",
+      "Summary: Fast, Extensible Progress Meter\n",
+      "Home-page: https://tqdm.github.io\n",
+      "Author: \n",
+      "Author-email: \n",
+      "License: MPL-2.0 AND MIT\n",
+      "Location: /Users/elee/Documents/GitHub/thesiscode2026/.venv/lib/python3.14/site-packages\n",
+      "Requires: \n",
+      "Required-by: \n",
+      "\n",
+      "after reload, tqdm.version= 4.67.1\n",
+      "importlib.metadata.version(tqdm)= 4.67.2\n",
+      "Patched pd.Series.progress_apply\n",
+      "Set tqdm.pandas to no-op\n"
      ]
     }
    ],
@@ -27,89 +47,13 @@
     "geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)\n",
     "try:\n",
     "    loc = geocode(\"Gaborone, Botswana\", timeout=10)\n",
-    "    print('OK', loc.latitude, loc.longitude) if loc else print('NO_RESULT')\n",
-    "except Exception as e:\n",
-    "    print('ERROR', type(e).__name__, e)\n"
+    "code\n",
+    "#VSC-c6684af9\n"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 1,
-   "id": "f85adbbf",
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "Deduped census CSV already exists at: census_population_2022_deduped.csv\n"
-     ]
-    }
-   ],
-   "source": [
-    "# Create deduped census CSV from raw census_population_2022.csv if missing\n",
-    "import os\n",
-    "import pandas as pd\n",
-    "\n",
-    "src_candidates = ['census_datacleaning/census_population_2022.csv', 'census_population_2022.csv']\n",
-    "src = next((p for p in src_candidates if os.path.exists(p)), None)\n",
-    "if src is None:\n",
-    "    raise FileNotFoundError('Source census CSV not found; expected one of: ' + ', '.join(src_candidates))\n",
-    "\n",
-    "out_paths = ['census_population_2022_deduped.csv', 'census_datacleaning/census_population_2022_deduped.csv']\n",
-    "if any(os.path.exists(p) for p in out_paths):\n",
-    "    existing = [p for p in out_paths if os.path.exists(p)][0]\n",
-    "    print('Deduped census CSV already exists at:', existing)\n",
-    "else:\n",
-    "    print('Reading source:', src)\n",
-    "    df = pd.read_csv(src)\n",
-    "\n",
-    "    # map lowercase column names to original names\n",
-    "    col_map = {c.lower(): c for c in df.columns}\n",
-    "\n",
-    "    # heuristics to find district and town columns\n",
-    "    def find_col(key_parts):\n",
-    "        for orig_lower, orig in col_map.items():\n",
-    "            if all(k in orig_lower for k in key_parts):\n",
-    "                return orig\n",
-    "        return None\n",
-    "\n",
-    "    district_col = find_col(['census', 'district']) or find_col(['district'])\n",
-    "    town_col = find_col(['city', 'town']) or find_col(['village']) or find_col(['citytownvillage'.lower()])\n",
-    "\n",
-    "    if district_col is None or town_col is None:\n",
-    "        # fallback: try common exact names\n",
-    "        for cand in ['Census District', 'census_district', 'District']:\n",
-    "            if cand in df.columns:\n",
-    "                district_col = cand\n",
-    "                break\n",
-    "        for cand in ['City/Town/Village', 'city/town/village', 'city_town_village', 'City/Town']:\n",
-    "            if cand in df.columns:\n",
-    "                town_col = cand\n",
-    "                break\n",
-    "\n",
-    "    if district_col is None or town_col is None:\n",
-    "        print('Warning: could not confidently detect district/town columns. Using first two columns as keys.')\n",
-    "        district_col, town_col = df.columns[0], df.columns[1]\n",
-    "\n",
-    "    print('Using key columns:', district_col, 'and', town_col)\n",
-    "    df[district_col] = df[district_col].astype(str).str.strip()\n",
-    "    df[town_col] = df[town_col].astype(str).str.strip()\n",
-    "\n",
-    "    df_dedup = df.drop_duplicates(subset=[district_col, town_col], keep='first').copy()\n",
-    "    print('Rows before:', len(df), 'after dedup:', len(df_dedup))\n",
-    "\n",
-    "    for p in out_paths:\n",
-    "        try:\n",
-    "            df_dedup.to_csv(p, index=False)\n",
-    "            print('Wrote deduped census file to', p)\n",
-    "        except Exception as e:\n",
-    "            print('Failed to write', p, e)\n"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 2,
+   "execution_count": 32,
    "id": "8de2365d",
    "metadata": {},
    "outputs": [],
@@ -132,55 +76,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 3,
-   "id": "9ceb9514",
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "Patched pandas.core.common.is_builtin_func\n",
-      "Patched pd.Series._is_builtin_func\n",
-      "Set tqdm.pandas to no-op\n"
-     ]
-    }
-   ],
-   "source": [
-    "# Compatibility monkeypatch for tqdm.pandas() with pandas 3.x\n",
-    "import pandas as pd\n",
-    "import pandas.core.common as pcc\n",
-    "import tqdm\n",
-    "\n",
-    "def _is_builtin_func(obj):\n",
-    "    import types as _types\n",
-    "    return isinstance(obj, (_types.BuiltinFunctionType, _types.BuiltinMethodType))\n",
-    "\n",
-    "# add missing symbol expected by older tqdm\n",
-    "try:\n",
-    "    pcc.is_builtin_func = _is_builtin_func\n",
-    "    print('Patched pandas.core.common.is_builtin_func')\n",
-    "except Exception as e:\n",
-    "    print('Failed to patch pandas.core.common.is_builtin_func:', e)\n",
-    "\n",
-    "# ensure Series has _is_builtin_func attribute used by some tqdm fallbacks\n",
-    "try:\n",
-    "    pd.Series._is_builtin_func = staticmethod(_is_builtin_func)\n",
-    "    print('Patched pd.Series._is_builtin_func')\n",
-    "except Exception as e:\n",
-    "    print('Failed to set pd.Series._is_builtin_func:', e)\n",
-    "\n",
-    "# make tqdm.pandas a no-op to avoid its incompatible implementation\n",
-    "try:\n",
-    "    tqdm.pandas = lambda *a, **k: None\n",
-    "    print('Set tqdm.pandas to no-op')\n",
-    "except Exception as e:\n",
-    "    print('Failed to set tqdm.pandas no-op:', e)\n"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 37,
+   "execution_count": 33,
    "id": "dbff813c",
    "metadata": {},
    "outputs": [
@@ -188,34 +84,44 @@
      "name": "stderr",
      "output_type": "stream",
      "text": [
-      "geocoding: 100%|██████████| 8263/8263 [2:23:52<00:00,  1.04s/loc]  \n"
+      "  0%|          | 0/8263 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "ename": "AttributeError",
+     "evalue": "'Series' object has no attribute '_is_builtin_func'",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[31m---------------------------------------------------------------------------\u001b[39m",
+      "\u001b[31mImportError\u001b[39m                               Traceback (most recent call last)",
+      "\u001b[36mFile \u001b[39m\u001b[32m~/Documents/GitHub/thesiscode2026/.venv/lib/python3.14/site-packages/tqdm/std.py:897\u001b[39m, in \u001b[36mtqdm.pandas.<locals>.inner_generator.<locals>.inner\u001b[39m\u001b[34m(df, func, *args, **kwargs)\u001b[39m\n\u001b[32m    896\u001b[39m \u001b[38;5;28;01mtry\u001b[39;00m:  \u001b[38;5;66;03m# pandas>=1.3.0\u001b[39;00m\n\u001b[32m--> \u001b[39m\u001b[32m897\u001b[39m     \u001b[38;5;28;01mfrom\u001b[39;00m\u001b[38;5;250m \u001b[39m\u001b[34;01mpandas\u001b[39;00m\u001b[34;01m.\u001b[39;00m\u001b[34;01mcore\u001b[39;00m\u001b[34;01m.\u001b[39;00m\u001b[34;01mcommon\u001b[39;00m\u001b[38;5;250m \u001b[39m\u001b[38;5;28;01mimport\u001b[39;00m is_builtin_func\n\u001b[32m    898\u001b[39m \u001b[38;5;28;01mexcept\u001b[39;00m \u001b[38;5;167;01mImportError\u001b[39;00m:\n",
+      "\u001b[31mImportError\u001b[39m: cannot import name 'is_builtin_func' from 'pandas.core.common' (/Users/elee/Documents/GitHub/thesiscode2026/.venv/lib/python3.14/site-packages/pandas/core/common.py)",
+      "\nDuring handling of the above exception, another exception occurred:\n",
+      "\u001b[31mAttributeError\u001b[39m                            Traceback (most recent call last)",
+      "\u001b[32m/var/folders/0n/fdwzy91j2j38zqkrjnq3yc040000gn/T/ipykernel_21541/2971942312.py\u001b[39m in \u001b[36m?\u001b[39m\u001b[34m()\u001b[39m\n\u001b[32m      5\u001b[39m \n\u001b[32m      6\u001b[39m tqdm.pandas()\n\u001b[32m      7\u001b[39m \n\u001b[32m      8\u001b[39m \u001b[38;5;66;03m# get coordinates\u001b[39;00m\n\u001b[32m----> \u001b[39m\u001b[32m9\u001b[39m towns[\u001b[33m\"location\"\u001b[39m] = towns[\u001b[33m\"query\"\u001b[39m].progress_apply(geocode)\n\u001b[32m     10\u001b[39m towns[\u001b[33m\"latitude\"\u001b[39m] = towns[\u001b[33m\"location\"\u001b[39m].apply(\u001b[38;5;28;01mlambda\u001b[39;00m loc: loc.latitude \u001b[38;5;28;01mif\u001b[39;00m loc \u001b[38;5;28;01melse\u001b[39;00m \u001b[38;5;28;01mNone\u001b[39;00m)\n\u001b[32m     11\u001b[39m towns[\u001b[33m\"longitude\"\u001b[39m] = towns[\u001b[33m\"location\"\u001b[39m].apply(\u001b[38;5;28;01mlambda\u001b[39;00m loc: loc.longitude \u001b[38;5;28;01mif\u001b[39;00m loc \u001b[38;5;28;01melse\u001b[39;00m \u001b[38;5;28;01mNone\u001b[39;00m)\n",
+      "\u001b[32m~/Documents/GitHub/thesiscode2026/.venv/lib/python3.14/site-packages/tqdm/std.py\u001b[39m in \u001b[36m?\u001b[39m\u001b[34m(df, func, *args, **kwargs)\u001b[39m\n\u001b[32m    895\u001b[39m \n\u001b[32m    896\u001b[39m                 \u001b[38;5;28;01mtry\u001b[39;00m:  \u001b[38;5;66;03m# pandas>=1.3.0,<3.0\u001b[39;00m\n\u001b[32m    897\u001b[39m                     \u001b[38;5;28;01mfrom\u001b[39;00m pandas.core.common \u001b[38;5;28;01mimport\u001b[39;00m is_builtin_func\n\u001b[32m    898\u001b[39m                 \u001b[38;5;28;01mexcept\u001b[39;00m ImportError:  \u001b[38;5;66;03m# pandas<1.3.0\u001b[39;00m\n\u001b[32m--> \u001b[39m\u001b[32m899\u001b[39m                     is_builtin_func = getattr(df, \u001b[33m'_is_builtin_func'\u001b[39m, \u001b[38;5;28;01mlambda\u001b[39;00m f: f)\n\u001b[32m    900\u001b[39m                 \u001b[38;5;28;01mtry\u001b[39;00m:\n\u001b[32m    901\u001b[39m                     func = is_builtin_func(func)\n\u001b[32m    902\u001b[39m                 \u001b[38;5;28;01mexcept\u001b[39;00m TypeError:\n",
+      "\u001b[32m~/Documents/GitHub/thesiscode2026/.venv/lib/python3.14/site-packages/pandas/core/generic.py\u001b[39m in \u001b[36m?\u001b[39m\u001b[34m(self, name)\u001b[39m\n\u001b[32m   6202\u001b[39m             \u001b[38;5;28;01mand\u001b[39;00m name \u001b[38;5;28;01mnot\u001b[39;00m \u001b[38;5;28;01min\u001b[39;00m self._accessors\n\u001b[32m   6203\u001b[39m             \u001b[38;5;28;01mand\u001b[39;00m self._info_axis._can_hold_identifiers_and_holds_name(name)\n\u001b[32m   6204\u001b[39m         ):\n\u001b[32m   6205\u001b[39m             \u001b[38;5;28;01mreturn\u001b[39;00m self[name]\n\u001b[32m-> \u001b[39m\u001b[32m6206\u001b[39m         \u001b[38;5;28;01mreturn\u001b[39;00m object.__getattribute__(self, name)\n",
+      "\u001b[31mAttributeError\u001b[39m: 'Series' object has no attribute '_is_builtin_func'"
      ]
     }
    ],
    "source": [
-    "# THIS CODE TAKES >4 HOURS TO RUN DUE TO RATE LIMITING — DO NOT RUN UNLESS YOU ARE ABSOLUTELY SURE\n",
+    "# THIS CODE TAKES >4 HOURS TO RUN DUE TO RATE LIMITING DO NOT RUN UNLESS YOU ARE ABSOLUTELY SURE\n",
     "\n",
     "geolocator = Nominatim(user_agent=\"botswana_census_geocoder\")\n",
     "geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)  # stay polite\n",
     "\n",
-    "# Use an explicit tqdm loop instead of tqdm.pandas to avoid pandas/tqdm incompatibilities\n",
-    "from tqdm import tqdm\n",
-    "locations = []\n",
-    "for q in tqdm(towns['query'], desc='geocoding', unit='loc'):\n",
-    "    try:\n",
-    "        locations.append(geocode(q, timeout=10))\n",
-    "    except Exception as e:\n",
-    "        print('ERROR for query', q, type(e).__name__, e)\n",
-    "        locations.append(None)\n",
+    "tqdm.pandas()\n",
     "\n",
-    "towns['location'] = locations\n",
-    "towns['latitude'] = towns['location'].apply(lambda loc: loc.latitude if loc else None)\n",
-    "towns['longitude'] = towns['location'].apply(lambda loc: loc.longitude if loc else None)\n"
+    "# get coordinates\n",
+    "towns[\"location\"] = towns[\"query\"].progress_apply(geocode)\n",
+    "towns[\"latitude\"] = towns[\"location\"].apply(lambda loc: loc.latitude if loc else None)\n",
+    "towns[\"longitude\"] = towns[\"location\"].apply(lambda loc: loc.longitude if loc else None)\n"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": 43,
+   "execution_count": 12,
    "id": "445b7f8e",
    "metadata": {},
    "outputs": [],
@@ -228,7 +134,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 38,
+   "execution_count": 17,
    "id": "9ccaa9a9",
    "metadata": {},
    "outputs": [
@@ -236,41 +142,14 @@
      "name": "stdout",
      "output_type": "stream",
      "text": [
-      "Loaded census_population_2022.csv as CSV: (8523, 4)\n",
-      "Merged 10456 rows with coordinates\n",
-      "Rows with coordinates: 10427\n"
+      "Merged 10484 rows with coordinates\n",
+      "Rows with coordinates: 10457\n"
      ]
     }
    ],
    "source": [
     "geo = pd.read_csv(\"../botswana_geocode/census_population_2022_geocoded_google_strict.csv\")\n",
-    "import os\n",
-    "pop_path = os.path.join('census_datacleaning','census_population_2022.csv') if os.path.exists(os.path.join('census_datacleaning','census_population_2022.csv')) else 'census_population_2022.csv'\n",
-    "# Try reading as CSV first; if that fails, attempt SPSS (.sav) via pyreadstat\n",
-    "try:\n",
-    "    pop = pd.read_csv(pop_path)\n",
-    "    print('Loaded census_population_2022.csv as CSV:', pop.shape)\n",
-    "except Exception as e:\n",
-    "    try:\n",
-    "        import pyreadstat\n",
-    "        pop, meta = pyreadstat.read_sav(pop_path)\n",
-    "        print('Loaded census_population_2022.csv as SPSS sav (file_format=', getattr(meta, 'file_format', None), ') with shape', pop.shape)\n",
-    "    except Exception as e2:\n",
-    "        raise\n",
-    "\n",
-    "# Ensure `DistrictName` exists in `pop` (SPSS file uses 'Census District')\n",
-    "if 'DistrictName' not in pop.columns:\n",
-    "    if 'Census District' in pop.columns:\n",
-    "        pop['DistrictName'] = pop['Census District']\n",
-    "    else:\n",
-    "        # fallback: try to construct from 'District' or leave blank if unavailable\n",
-    "        if 'District' in pop.columns:\n",
-    "            try:\n",
-    "                pop['DistrictName'] = pop['District'].astype(int).map(district_map)\n",
-    "            except Exception:\n",
-    "                pop['DistrictName'] = pop['District'].astype(str)\n",
-    "        else:\n",
-    "            pop['DistrictName'] = ''\n",
+    "pop = pd.read_csv(\"census_population_2022.csv\")\n",
     "\n",
     "# Create normalized merge key from both files\n",
     "geo[\"merge_key\"] = geo[\"City/Town/Village\"].str.strip().str.lower()\n",
@@ -291,17 +170,17 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 39,
+   "execution_count": 27,
    "id": "e914556d",
    "metadata": {},
    "outputs": [
     {
      "data": {
       "text/plain": [
-       "(2359609, 131)"
+       "(2359609, 128)"
       ]
      },
-     "execution_count": 39,
+     "execution_count": 27,
      "metadata": {},
      "output_type": "execute_result"
     }
@@ -316,7 +195,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 40,
+   "execution_count": 29,
    "id": "0a27a5c4",
    "metadata": {},
    "outputs": [
@@ -326,7 +205,7 @@
        "np.int64(2695)"
       ]
      },
-     "execution_count": 40,
+     "execution_count": 29,
      "metadata": {},
      "output_type": "execute_result"
     }
@@ -338,7 +217,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 41,
+   "execution_count": 31,
    "id": "b985375b",
    "metadata": {},
    "outputs": [
@@ -348,7 +227,7 @@
        "(2359609, 2356914, 2695)"
       ]
      },
-     "execution_count": 41,
+     "execution_count": 31,
      "metadata": {},
      "output_type": "execute_result"
     }
@@ -366,7 +245,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 42,
+   "execution_count": null,
    "id": "8a92ed1b",
    "metadata": {},
    "outputs": [
@@ -410,7 +289,7 @@
        " np.int64(91)]"
       ]
      },
-     "execution_count": 42,
+     "execution_count": 34,
      "metadata": {},
      "output_type": "execute_result"
     }
@@ -422,7 +301,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 43,
+   "execution_count": null,
    "id": "895401e7",
    "metadata": {},
    "outputs": [],
@@ -471,7 +350,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 44,
+   "execution_count": 37,
    "id": "c8687e56",
    "metadata": {},
    "outputs": [
@@ -481,7 +360,7 @@
        "np.int64(0)"
       ]
      },
-     "execution_count": 44,
+     "execution_count": 37,
      "metadata": {},
      "output_type": "execute_result"
     }
@@ -492,7 +371,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 45,
+   "execution_count": 38,
    "id": "2fa9e7f1",
    "metadata": {},
    "outputs": [
@@ -536,7 +415,7 @@
        " 'Tsabong']"
       ]
      },
-     "execution_count": 45,
+     "execution_count": 38,
      "metadata": {},
      "output_type": "execute_result"
     }
@@ -547,7 +426,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 46,
+   "execution_count": 39,
    "id": "c8406315",
    "metadata": {},
    "outputs": [
@@ -571,7 +450,7 @@
        " '<1']"
       ]
      },
-     "execution_count": 46,
+     "execution_count": 39,
      "metadata": {},
      "output_type": "execute_result"
     }
@@ -593,27 +472,8 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 47,
-   "id": "357f5fe3",
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "df[\"DistrictCode\"] = df[\"District\"].astype(int)\n",
-    "df[\"DistrictName\"] = df[\"DistrictCode\"].map(district_map)\n",
-    "\n",
-    "pop = (\n",
-    "    df.groupby([\"DistrictCode\",\"DistrictName\",\"AgeGroup\"])\n",
-    "      .size()\n",
-    "      .reset_index(name=\"Population\")\n",
-    ")\n",
-    "\n",
-    "pop = pop.sort_values([\"DistrictCode\",\"AgeGroup\"])\n"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 48,
-   "id": "b69996f6",
+   "execution_count": 41,
+   "id": "aa8de740",
    "metadata": {},
    "outputs": [
     {
@@ -658,7 +518,7 @@
        "Name: Population, dtype: int64"
       ]
      },
-     "execution_count": 48,
+     "execution_count": 41,
      "metadata": {},
      "output_type": "execute_result"
     }
@@ -673,10 +533,47 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 49,
+   "execution_count": 43,
+   "id": "357f5fe3",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/var/folders/0n/fdwzy91j2j38zqkrjnq3yc040000gn/T/ipykernel_4706/858037773.py:5: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.\n",
+      "  df.groupby([\"DistrictCode\",\"DistrictName\",\"AgeGroup\"])\n"
+     ]
+    }
+   ],
+   "source": [
+    "df[\"DistrictCode\"] = df[\"District\"].astype(int)\n",
+    "df[\"DistrictName\"] = df[\"DistrictCode\"].map(district_map)\n",
+    "\n",
+    "pop = (\n",
+    "    df.groupby([\"DistrictCode\",\"DistrictName\",\"AgeGroup\"])\n",
+    "      .size()\n",
+    "      .reset_index(name=\"Population\")\n",
+    ")\n",
+    "\n",
+    "pop = pop.sort_values([\"DistrictCode\",\"AgeGroup\"])\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 58,
    "id": "07363d78",
    "metadata": {},
-   "outputs": [],
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/var/folders/0n/fdwzy91j2j38zqkrjnq3yc040000gn/T/ipykernel_4706/4210955656.py:7: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.\n",
+      "  df.groupby([\"DistrictName\",\"AgeGroup\"])\n"
+     ]
+    }
+   ],
    "source": [
     "# rebuild district code and name cleanly\n",
     "df[\"DistrictCode\"] = df[\"District\"].astype(int)\n",

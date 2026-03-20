@@ -1,0 +1,2103 @@
+    Final Report: Designing Robust Antimicrobial Supply Chains
+     with Epidemiological Demand Uncertainty in Botswana: A
+                   Network Optimization Model
+                                           Elliot S. Lee
+                              Advised by Professor Bartolomeo Stellato
+                                               October 2025
+
+
+
+1     Introduction
+
+Antimicrobial resistance (AMR) has become a major threat to global health. In 2021, an estimated 4.71 mil-
+
+lion deaths were associated with AMR worldwide, including 200,000 in children under five [25]. Sub-Saharan
+
+Africa accounted for nearly 1 million of these deaths [13]. In 2016, the World Health Organization (WHO)
+
+introduced a global action plan to “optimize the use of antimicrobials in human and animal health” and
+
+“develop the economic case for sustainable investment” [8]. Achieving these objectives requires progress on
+
+several fronts: responsible antimicrobial use, research and development of affordable drugs, implementation
+
+of the Global Antimicrobial Resistance and Use Surveillance System (GLASS), and reliable distribution of
+
+medicines through efficient supply chains.
+
+    The Government of Botswana has sought to reflect these priorities in its initial AMR response, with a
+
+draft of the country’s first five-year AMR National Action Plan in 2018 [33]. Although the plan outlined
+
+strategies for surveillance, stewardship, and supply chain strengthening, it was never formally endorsed, and
+
+implementation stalled. A review launched in 2023 now seeks to reactivate these efforts and establish a
+
+sustainable national framework that is awaiting formal approval.
+
+    Even with this renewed commitment, however, Botswana faces persistent operational challenges in en-
+
+suring reliable access to essential medicines. The 2021 Tripartite AMR Country Self-Assessment Survey
+
+(TrACSS) noted that while Botswana has developed basic capacity for antimicrobial management, this ca-
+
+pacity has not yet translated into consistent availability of drugs at the point of care [43]. On 7 March 2022,
+
+average drug availability at Central Medical Stores (CMS), the country’s main procurement and distribution
+
+agency, was 46%, and only 38% for vital medicines [34]. Availability improved to 78% for vital drugs in
+
+2024, but logistical resilience has remained limited. In August 2025, the Government of Botswana declared
+
+a national public health emergency after widespread shortages left clinics without essential medicines, un-
+
+
+                                                      1
+derscoring the continuing fragility of the national pharmaceutical supply chain [36]. The Acting Director of
+
+Primary Health Care, Samuel Kolane, observed in 2024 that better forecasting based on utilization and con-
+
+sumption data is essential to prevent shortages, emphasizing the need for predictive and optimization-based
+
+approaches to public health logistics [35].
+
+
+1.1    Motivation
+
+Improving antimicrobial availability in Botswana requires strengthening the national pharmaceutical supply
+
+chain. CMS is responsible for procuring and distributing essential medicines to public health facilities across
+
+the country, yet inefficiencies persist in forecasting, lead times, and communication across the distribution
+
+network [23]. These gaps result in uneven access: some hospitals accumulate excess inventory, while many
+
+clinics and health posts frequently experience shortages of first-line antibiotics [23]. Such imbalances interrupt
+
+treatment and accelerate the spread of resistant infections.
+
+   Forecasting and visibility challenges also stem from limited digital infrastructure. In contrast, Tanzania’s
+
+introduction of an electronic logistics system (eLIMS) reduced stockouts from 32% to 23% and long stockouts
+
+from 24% to 15% [24]. Botswana’s Ministry of Health has expressed similar ambitions for data-driven
+
+forecasting, but implementation remains limited, leaving procurement decisions largely reactive. Building
+
+predictive capacity and data-informed planning is essential to improve efficiency, reduce waste, and ensure
+
+equitable distribution.
+
+   Optimizing Botswana’s antimicrobial supply chain therefore presents both a challenge and an opportu-
+
+nity. A network optimization framework informed by real operational data can identify system bottlenecks,
+
+improve stock allocation, and reduce waste from expirations. Such an approach aligns national supply chain
+
+reforms with WHO objectives and strengthens the country’s resilience to AMR-related disruptions.
+
+
+1.2    Distribution Structure
+
+Botswana’s public sector provides healthcare to roughly 83% of the population and manages large-scale
+
+procurement and distribution of medicines [6]. Since the country does not manufacture human medicines
+
+at scale, the Central Medical Stores (CMS) in Gaborone procures and distributes pharmaceuticals to 27
+
+health districts [42]. These include 3 national referral hospitals, 11 district hospitals, 18 primary hospitals,
+
+222 clinics, 330 health posts, and 931 mobile stops. CMS supplies national referral hospitals and district
+
+health management teams (DHMTs), which operate warehouses and distribute to local facilities. Deliveries
+
+to district-level sites are managed by Botswana Post, a contracted logistics provider.
+
+   CMS is equipped with 8,999 pallet slots, guided forklifts, and the ePulse warehouse management system,
+
+
+
+                                                        2
+Figure 1: Simplified overview of Botswana’s pharmaceutical distribution system, adapted from the Standard
+Operating Procedures Manual for the Logistics Management of Health Commodities in Botswana (2019) and
+USAID GHSC-PSM (2021) [42, 20].
+
+
+but its utilization rate has reached 96%, exceeding the recommended operational threshold of 90% [42]. This
+
+congestion slows order fulfillment and limits flexibility. DHMT warehouses often lack dedicated vehicles
+
+and rely on ambulances or ad hoc transport, while clinics and health posts use inconsistent paper or digital
+
+inventory systems. Many facilities have limited storage space, insufficient cold chain capacity, and no backup
+
+power or pest control, leading to frequent stock discrepancies and delays in disposing of expired products.
+
+    The 2021 USAID Botswana Warehousing and Storage Assessment recommended revising the national dis-
+
+tribution strategy, standardizing warehouse design, integrating inventory platforms, and expanding technical
+
+capacity [42]. This thesis will build on these recommendations by developing a network optimization model
+
+that accounts for uncertainty in demand, storage, and vehicle availability. The model aims to focus on CMS
+
+and its downstream distribution to DHMT warehouses, clinics, and health posts, identifying bottlenecks and
+
+guide resource allocation for a more resilient and data-informed pharmaceutical supply chain.
+
+
+
+2    Literature Review
+
+Efficient antimicrobial distribution remains a critical challenge in regions with dispersed populations and
+
+limited healthcare capacity. Although prior work has optimized health supply chains under stochastic as-
+
+sumptions, few network models account for epidemiological feedback between intervention and disease spread.
+
+We aim to embed an SEIR constraint structure into an optimization formulation to dynamically allocate
+
+
+                                                      3
+antimicrobials in response to evolving infection levels. The following section reviews key contributions in
+
+supply chain optimization under uncertainty, robust and adjustable robust optimization, expiration-aware
+
+modeling, antimicrobial resistance, and supply chain resilience.
+
+
+2.1    Supply Chain Optimization under Uncertainty
+
+Classical supply chain models such as the Economic Order Quantity (EOQ) minimize holding and ordering
+
+costs under constant demand and instantaneous replenishment [12]. Although useful for simple systems,
+
+these formulations do not address perishability, capacity limits, or network constraints that are critical in
+
+health supply chains. Subsequent models incorporated uncertainty to better capture the variability inherent
+
+in real-world systems. Broadly, these models extend deterministic formulations by introducing uncertain
+
+parameters for demand, supply, or transportation times, allowing planners to evaluate system performance
+
+under multiple potential outcomes [45].
+
+   A general inventory balance constraint commonly used in multi-echelon systems is
+
+                                                 X                       X
+                          Ii,p,t+1 = Ii,p,t +             Fj→i,p,t −              Fi→k,p,t − Di,p,t ,        (1)
+                                                j∈in(i)                k∈out(i)
+
+
+where I is inventory, F is flow between nodes, and D is demand in location i for product p at time t [29]. This
+
+equation provides the structural basis for many supply chain formulations, linking upstream and downstream
+
+flows across time and space.
+
+   Although most applications have focused on cost minimization, health supply chains introduce additional
+
+considerations such as service-level targets and penalties for expirations or stockouts. These objectives reflect
+
+broader public health priorities rather than purely logistical efficiency. This motivates a closer examination
+
+of frameworks capable of capturing uncertainty without relying on full probabilistic information, such as
+
+robust and adjustable robust optimization methods discussed in the next section.
+
+
+2.2    Robust and Adjustable Robust Optimization in Inventory Problems
+
+Robust optimization provides a framework for decision making under uncertainty without requiring full
+
+probabilistic information. Instead of relying on expected values, robust formulations seek solutions that
+
+remain feasible for all realizations of uncertain parameters within a prescribed uncertainty set. The general
+
+framework introduced by [3] formalized this approach and demonstrated that tractable robust counterparts
+
+can be derived for large-scale linear programs through duality-based reformulations. Subsequent work by [4]
+
+introduced the budgeted uncertainty set, which limits the number or intensity of parameters that can simul-
+
+
+
+                                                               4
+taneously deviate to their worst-case values, thereby offering a tunable balance between conservatism and
+
+performance. This approach has proven particularly effective for applications in data-limited environments
+
+such as healthcare logistics, where full distributional information is rarely available.
+
+   Adjustable robust optimization (ARO) extends this framework by allowing certain decisions to adapt
+
+to realized uncertainty. Rather than solving for a single fixed decision, the model defines a decision policy
+
+that updates as new information becomes available. A common approach is to approximate adaptability
+
+through affine decision rules, which express decisions as linear functions of observed uncertainty realizations.
+
+As reviewed by [44], this method enables tractable implementation of adaptive strategies in sequential
+
+production or inventory problems with uncertain demand. Such flexibility is particularly valuable in public
+
+health systems like Botswana’s, where new information on disease prevalence or medicine consumption can
+
+inform mid-horizon allocation updates.
+
+
+2.3    Modeling Drug Demand
+
+In the pharmacoepidemiology and health services literature, count outcomes such as prescription drug uti-
+
+lization, opioid related emergency department visits, or outpatient encounter frequencies typically exhibit
+
+substantial overdispersion, where the variance of the count variable exceeds its mean. This characteristic
+
+violates the equidispersion assumption of the Poisson model and motivates the use of more flexible spec-
+
+ifications. For example, [37] employs a negative binomial regression to model opioid related emergency
+
+department visit counts adjusted for alternative measures of drug availability, illustrating that negative bi-
+
+nomial models can accommodate the heterogeneity and dispersion that routinely arise in drug related event
+
+data. Their analysis highlights how underlying variability in exposure, case mix, and reporting practices can
+
+generate dispersion levels that exceed the capacity of a Poisson formulation.
+
+   A broader comparison of count data methods is provided by [1], who evaluate Poisson, negative binomial,
+
+zero inflated and hurdle models for outpatient health services utilisation. Their results indicate that zero
+
+inflated models may offer improved fit when the data generating process includes a distinct source of excess
+
+zeros, such as structural non-utilisation at the individual level. Importantly, their discussion clarifies that
+
+the choice between negative binomial and zero inflated specifications depends on whether zeros arise from
+
+the same stochastic mechanism that generates positive counts or from a separate process. This distinction
+
+is central to model selection in applied health systems settings.
+
+   A recent review by [32] similarly emphasizes that drug utilization measures often violate Poisson equidis-
+
+persion and identifies the negative binomial distribution as an appropriate specification in such settings.
+
+The review situates negative binomial models within the broader aims of pharmacological treatment evalu-
+
+
+
+                                                       5
+ation, noting that accurate characterization of utilization patterns is essential for understanding treatment
+
+effectiveness, resource allocation and potential disparities in access. The discussion also underscores that
+
+variability in utilization arises from clinical, demographic and behavioral factors that naturally produce
+
+count distributions with higher variance than mean.
+
+   Taken together, these studies demonstrate that overdispersion is an inherent feature of drug related
+
+and health service count outcomes, and that negative binomial models provide a flexible and interpretable
+
+framework for addressing this feature. They further clarify that zero inflated approaches are warranted
+
+when a separate zero generating mechanism is present, which provides guidance for selecting an appropriate
+
+model in settings where structural zeros are absent. The zero-inflated structure identified in [1] arises from
+
+structural non-utilisation at the individual level, where a large subpopulation records no outpatient visits at
+
+all. Facility level drug stock data do not necessarily exhibit this mechanism, since all facilities participate in
+
+the supply chain and zeros may represent realized demand changes within the same stochastic process that
+
+generates positive counts.
+
+
+2.4    Expiration-Aware Modeling
+
+A major challenge in healthcare logistics is product perishability. Antimicrobials, like vaccines or blood
+
+products, have finite shelf lives that impose additional constraints on storage and replenishment policies.
+
+Classical inventory studies such as [26] first formalized the integration of fixed and stochastic shelf-life limits
+
+into inventory theory, laying the foundation for modern perishable goods modeling.
+
+   Subsequent work has treated perishability in various ways. [30] developed a dynamic programming
+
+model that tracks inventory age and discards expired units before replenishment, while [38] introduced
+
+a stochastic mixed-integer formulation for blood products that explicitly manages expiration and rotation.
+
+These detailed models are useful for products requiring strict first-in, first-out rules but can be overly complex
+
+for antimicrobials, which often lack unit-level traceability. Alternatively, [14] used a robust optimization
+
+approach to penalize aggregate waste under worst-case demand scenarios, offering a simpler method for
+
+managing expirations in fast-moving health programs.
+
+   In practice, the shelf life of antimicrobial products varies substantially across classes, ranging from a few
+
+months to several years. This heterogeneity can be incorporated in longer-term simulations of the model,
+
+where drug-specific expiration parameters are used to examine how differential decay rates affect allocation
+
+strategies and waste penalties over time. For Botswana’s context, where batch-level shelf-life data are known
+
+and delivery intervals are predictable, a hybrid approach may be the most appropriate: penalizing expiration
+
+costs while explicitly constraining remaining shelf life. Such a method could capture key operational trade-
+
+
+
+                                                        6
+offs without excessive model complexity.
+
+
+2.5    Antimicrobial Resistance and Externalities
+
+Traditional supply chain models rarely internalize the broader public health externalities associated with
+
+antimicrobial use. Delayed or incomplete treatment can accelerate the emergence of resistant pathogens,
+
+creating costs that extend beyond immediate stockouts or expirations [17]. Foundational work by [18]
+
+conceptualized antimicrobial resistance as an accumulating stock in a dynamic system, showing that myopic
+
+prescribing leads to socially suboptimal outcomes. Although these models focus on prescribing rather than
+
+logistics, the principle that short-term allocation decisions have long-term epidemiological consequences
+
+applies directly to supply chain planning.
+
+   Recent literature has attempted to capture these effects through health-based penalty terms or scenario
+
+weighting. Disability-Adjusted Life Years (DALYs), for instance, provide a metric for quantifying the social
+
+burden of delayed or incomplete access to essential medicines [7]. Integrating DALY-based penalties into
+
+objective functions allows models to account for downstream health losses, though this approach requires
+
+caution due to limitations in DALY weighting across age and socioeconomic groups [2]. Applying such
+
+metrics to Botswana’s centralized supply chain, albeit with some careful interpretation, could help align
+
+operational efficiency and demand fulfillment with a measure of public health impact.
+
+
+2.6    Supply Chain Resilience
+
+Beyond efficiency and cost-minimization, resilience, or the system’s capacity to anticipate and recover from
+
+disruptions, is a key consideration in pharmaceutical logistics. [40] showed that pharmaceutical networks are
+
+particularly vulnerable to correlated shocks such as supplier failures, transport delays, and quality recalls,
+
+mainly due to the limited substitutability of essential medicines. Their reliability framework introduced
+
+probabilistic measures of expected shortages and recovery times, which can be adapted to the import-
+
+dependent network of Botswana by treating upstream nodes as suppliers and customs checkpoints rather
+
+than production sites.
+
+   Later work expanded the concept of resilience to include agility and sustainability. [15] proposed the
+
+notion of viable supply chains that maintain continuity in prolonged or overlapping crises. Their approach
+
+highlights that robustness alone may not be enough to ensure adaptability once disruptions occur. In public
+
+health systems with rigid procurement cycles and limited transport capacity, this integration of resilience
+
+and agility is especially important.
+
+   In the context of medical supply chains, unique disruptions arise in the form of epidemics. [10] applied
+
+
+
+                                                      7
+multi-objective optimization to allocate scarce medical resources under epidemic uncertainty, demonstrating
+
+that resilient strategies must balance efficiency and equity when demand surges occur simultaneously across
+
+regions. Therefore, improved data visibility and communication between CMS and district warehouses
+
+constitute a practical form of resilience, and equitable distribution should be an important consideration of
+
+any accurate predictive model for medical distribution. Further promise in the literature for the integration
+
+of epidemic-based constraints with supply chain networks are discussed in 2.7.
+
+
+2.7    Embedding Epidemiological Feedback
+
+Conventional supply chain reliability models typically assume that failures and recoveries occur independently
+
+in all locations. In public health systems, this assumption often breaks down because infectious disease
+
+dynamics create correlated and time-dependent demand shocks. Epidemics can synchronize demand surges
+
+across facilities, reduce workforce availability, and strain transport capacity simultaneously. To address
+
+this, several studies have integrated compartmental disease models with logistics and resource allocation
+
+frameworks.
+
+   [5] demonstrated how epidemiological forecasting can directly inform prescriptive decisions by embed-
+
+ding the dynamics of an SEIR-type disease within a data-driven optimization model in the context of the
+
+COVID-19 pandemic. Recent work by [11] combines Bayesian inference with SEIR simulations to gener-
+
+ate probabilistic demand trajectories, showing that uncertainty in disease spread can be incorporated into
+
+real-time decision systems. Earlier theoretical work by [16] extended SEIR frameworks to include treatment-
+
+induced resistance, providing a tractable framework to properly link the extent of medical intervention to
+
+the evolution of resistant strains.
+
+   These models collectively illustrate the value of coupling epidemic evolution with supply allocation. By
+
+linking infection prevalence to demand, planners can anticipate future shortages, prioritize critical regions,
+
+and mitigate the secondary health effects of delayed treatment. For Botswana’s antimicrobial distribution
+
+network, embedding epidemiological feedback would enable the system to adapt to emerging AMR outbreaks
+
+by dynamically updating demand forecasts and optimizing deliveries in response to spatial and temporal
+
+changes in infection levels. Incorporating such feedback structures transforms the model from a static
+
+optimization problem into a responsive decision framework that reflects the interdependence between disease
+
+transmission and supply chain performance.
+
+
+
+
+                                                      8
+2.8      Contributions and Gaps
+
+Although extensive research has examined supply chain optimization, perishability, and epidemic modeling,
+
+few studies integrate these dimensions into a unified framework for antimicrobial distribution. This thesis
+
+will address three main gaps in the literature.
+
+
+    1. Coupling Epidemic Dynamics with Supply Chain Decisions: Most supply chain models assume
+
+        exogenous demand, ignoring how disease transmission shapes real-time needs for medical resources.
+
+        This thesis embeds epidemic dynamics directly into a network optimization framework, allowing infec-
+
+        tions and supply decisions to co-evolve.
+
+    2. Internalizing the Externalities of AMR: Delayed or incomplete antimicrobial access accelerates
+
+        resistance emergence, but current models neglect these social costs. This work incorporates AMR-
+
+        sensitive penalties and DALY-based metrics to quantify downstream health impacts in optimization.
+
+    3. Adapting Reliability Metrics to Import-Based Health Systems: Existing reliability models
+
+        assume internal production networks, which do not reflect Botswana’s import-based pharmaceutical
+
+        system. This thesis adapts those methods to assess resilience across CMS and district-level distribution,
+
+        accounting for disruptions in transport and supply.
+
+
+
+3       Data Sources
+
+3.1      Available and Acquired Data
+
+This study draws on several datasets obtained from the Botswana Ministry of Health, as well as former offi-
+
+cials with the Central Medical Stores and at the African Comprehensive HIV/AIDS Partnership (ACHAP),
+
+an important partner in the implementation of this project.
+
+
+3.1.1     Botswana National Health Facility Data
+
+Facility-level data were obtained from the Botswana Health Facility Master List maintained by the Ministry
+
+of Health and Wellness. The dataset includes the geospatial coordinates, ownership, level of care, and district
+
+affiliations of all registered health facilities in the country. These data were used to identify public-sector
+
+facilities and to construct the network of delivery nodes for the optimization model [21].
+
+    The locations of district warehouses were approximated using the coordinates of each health district’s
+
+administrative capital, or, if possible, the district’s primary hospital. This approach reflects an operational
+
+structure in which District Health Management Team (DHMT) warehouses are typically situated in district
+
+
+                                                        9
+capitals or near the district’s anchoring primary hospital, though the exact coordinates are not publicly
+
+available. These approximations were used to define the intermediate nodes linking the Central Medical
+
+Stores (CMS) to health facilities within each district. A formal data request has been submitted to the
+
+Ministry of Health to obtain verified warehouse coordinates, and the model will be updated accordingly if
+
+an updated data source becomes available [19].
+
+
+3.1.2   Antimicrobial List
+
+A supplementary dataset of priority antimicrobials was used to identify nationally relevant formulations and
+
+their WHO AWARE classifications. The table lists 67 antimicrobial products and assigns each to one of
+
+three WHO categories: Access (A), Watch (W), or Reserve (R), with additional compounds designated as
+
+non-classified (N/A). This classification enables stratification of drug importance within the optimization
+
+model, ensuring that allocation decisions reflect both therapeutic priority and stewardship objectives [22].
+
+   Shelf-life and storage condition estimates were assigned using representative product labeling informa-
+
+tion from the U.S. Food and Drug Administration’s DailyMed database [41]. This source provides official
+
+manufacturer data on expiration periods and temperature requirements for a wide range of antimicrobial
+
+formulations. To ensure consistency across products, unopened shelf lives were converted to weekly units
+
+based on common pharmaceutical stability ranges observed in hot and humid climates similar to Botswana’s.
+
+Standardized values were temporarily set at 130 weeks for tablets and capsules, 104 weeks for injectable pow-
+
+ders and infusions, 78 weeks for oral suspension powders, and 52 weeks for liquid injectables requiring cold
+
+storage. These estimates reflect conservative, unopened-state stability and will be used to parameterize
+
+expiration penalties in future developments of the optimization model.
+
+
+3.1.3   Population and Facility Geocoding
+
+Population data were obtained from Statistics Botswana’s 2022 national census, which enumerates all recog-
+
+nized towns, villages, and localities along with their total resident populations. Because the public release of
+
+these data does not include spatial coordinates, each settlement name was geocoded to obtain latitude and
+
+longitude values. Initial coordinates were generated using the OpenStreetMap Nominatim API, combining
+
+settlement and district names in the query string (e.g., “Letlhakane, Central District, Botswana”) to improve
+
+match precision and disambiguate duplicate place names [27].
+
+   To ensure complete spatial coverage and correct potential mismatches, the Nominatim results were subse-
+
+quently validated and refined using the Google Maps Geocoding API, which returned coordinates with higher
+
+positional accuracy for a small subset of unlocated or low-confidence settlements. The combined dataset pro-
+
+duced valid coordinates for 8,321 populated places nationwide, each associated with its corresponding census
+
+
+                                                      10
+populations.
+
+
+3.1.4    Road-Network Distances and Spatial Linkage
+
+Health-facility coordinates were compiled from the Ministry of Health and Wellness master facility registry
+
+and augmented with warehouse locations. Service-delivery types were standardized into consistent categories
+
+(Health Post, Clinic, Clinic with Maternity, Primary Hospital, District Hospital, and Referral Hospital), with
+
+Clinics and Clinics with Maternity jointly treated as a single clinic-tier level for access modeling. Facilities
+
+labeled as “school clinic” or “prison clinic” were excluded to restrict the analysis to civilian, publicly accessible
+
+sites.
+
+    Each populated census tract was linked to its closest health facilities using a k-d tree nearest-neighbor
+
+search implemented in Python’s scipy.spatial.cKDTree module. For every settlement–facility pair, the
+
+k-d tree identified the nearest facility by minimizing great-circle distance on the Earth’s surface, providing
+
+an initial topological linkage between population demand points and service locations.
+
+    A national routing network was then constructed using the Open Source Routing Machine (OSRM) and
+
+the most recent OpenStreetMap (OSM) extract for Botswana obtained from Geofabrik [9]. The OSRM
+
+backend was deployed locally in a Docker container to ensure reproducibility and full control over routing
+
+parameters [31]. The compiled network, containing approximately 16.5 million nodes and 1.8 million edges,
+
+enabled detailed modeling of travel routes across paved, gravel, and unpaved roads.
+
+    To incorporate transport accessibility, each census tract was routed to its nearest Health Post, Clinic
+
+(including Maternity), and Primary Hospital using the locally hosted OSRM instance. The resulting ori-
+
+gin–destination list provided road-network travel distances (in kilometers) and estimated travel times (in
+
+minutes) between census tracts and facilities. This hybrid k-d tree and OSRM framework yielded a tractable
+
+approximation of service catchments that integrates both spatial proximity and realistic network connectivity.
+
+    The final dataset excluded non-public facilities and retained 10,492 census tracts, each assigned to its
+
+closest health post, clinic, and primary hospital. This integrated approach was able to assign 282 of 328
+
+health posts, 220 of 258 clinics, and 15 of 15 primary hospitals considered in the model. Unassigned health
+
+facilities will be handled on a case-by-case basis to their nearest census tract, and may have resulted from
+
+extremely dense population areas that assigned populations to other health facilities nearby. This spatial
+
+framework will form the basis for subsequent optimization of supply-chain logistics and facility-level resource
+
+allocation [39].
+
+
+
+
+                                                         11
+3.2    Requested Data
+
+Additional datasets have been formally requested from the Ministry of Health under the study title Design-
+
+ing Robust Antimicrobial Supply Chains under Epidemiological Demand Uncertainty in Botswana. These
+
+datasets, pending approval, include aggregated records from the Central Medical Stores (CMS), District
+
+Health Management Teams (DHMTs), and other relevant Ministry of Health departments.
+
+    The request encompasses facility-level antimicrobial demand estimates, supply records, transportation
+
+routes, delivery frequencies, and procurement cost samples. In particular, the CMS dataset will provide
+
+information on historical procurement volumes, distribution quantities, and stockout frequencies across the
+
+public sector. The DHMT-level data will describe warehouse-to-facility linkages, including delivery routes
+
+and inter-district transport distances. Cost data will include estimates for logistics operations such as fuel
+
+expenditure, vehicle maintenance, and labor costs, with the potential inclusion of delivery cost information
+
+from Botswana Post to inform route optimization.
+
+    Facility classifications and geospatial coordinates have also been requested to supplement and validate
+
+the currently available health-facility master list. All requested data are aggregated and non-personal,
+
+in full compliance with HRDC ethical standards. No patient-level or clinical data will be obtained. We
+
+will work jointly with ACHAP and Ministry of Health officials to ensure data accuracy, completeness, and
+
+anonymization prior to analysis.
+
+
+
+4     Analysis
+
+4.1    Network Construction
+
+631 facilities were matched to the Botswana Ministry of Health’s master facility list. 22 district-level ware-
+
+houses were identified as distribution hubs, including 3 (Northeast, Tutume, and Francistown) that share the
+
+same physical warehouse location in Francistown. The resulting dataset distinguishes between warehouses
+
+and service delivery points and forms the basis for the national distribution graph G = (N, A), where nodes
+
+N represent health facilities and arcs A represent feasible delivery routes.
+
+    Pairwise road distances and travel durations were computed using OSRM’s /table API endpoint, which
+
+returns the shortest-path distances and estimated driving times between all origin–destination pairs [31].
+
+Travel durations were derived from OpenStreetMap road-class–specific speed assignments, reflecting expected
+
+driving times under nominal conditions. The resulting distance and duration matrices are each 631 × 631,
+
+representing 398,161 unique origin–destination pairs across the national network. Because real-world travel
+
+in Botswana is affected by unpaved roads, weather conditions, and intermittent vehicle availability, the
+
+
+                                                      12
+                 Figure 2: Facility type counts included in the distance and duration matrices.
+
+
+
+
+     Figure 3: Average speeds calculated by OSRM routes, scaled up by 1.2 to account for uncertainty.
+
+
+computed travel durations were conservatively scaled by a factor of 1.2 to produce an upper-bound duration
+
+matrix. This adjustment ensures that subsequent cost optimization analyses account for travel uncertainty
+
+and buffer times observed in practice, aligning modeled performance with realistic delivery constraints.
+
+    Each facility in the matrices was labeled by its corresponding service-delivery category (e.g., clinic, health
+
+post, primary hospital ) to enable aggregation and stratified analysis. Example entries in the final matrices
+
+include Mahalapye District Hospital (Primary Hospital) and Artesia Clinic (Clinic).
+
+    The final network was able to account for 22 warehouses, 3 national referral hospitals, 10 district hospitals,
+
+15 primary hospitals, 258 clinics, and 328 health posts, as seen in Figure 2.1 Facilities were geocoded using
+   1 Note that there are more clinics and health posts than described in 3.1.4, which eliminated any school or prison-based
+
+facilities that would not be accessed by the general public.
+
+
+
+
+                                                               13
+the Botswana Ministry of Health’s master facility list. To validate routing performance, OSRM-generated
+
+travel times were converted into implied speeds by dividing the total road distance by travel duration for all
+
+origin–destination pairs. The resulting speed distribution was right-skewed, with a median of approximately
+
+58 km/h and a long upper tail corresponding to highway travel. Most within-district trips fell between
+
+40–70 km/h, while inter-district routes exhibited greater variability due to unpaved segments and longer
+
+rural distances. These results provided some reassurance that OSRM captured somewhat realistic travel
+
+dynamics across Botswana’s mixed road network, as seen in Figure 3.
+
+
+4.2      Notation and Variable Definitions
+
+To construct the first-stage optimization model, we begin by defining our sets, indices, parameters and
+
+decision variables.
+
+
+4.2.1     Model Structure and Notation
+
+We model the antimicrobial distribution network as a directed graph G = (N, A), where:
+
+   • N : set of nodes representing public-sector health facilities (e.g., the Central Medical Stores, DHMT
+
+        warehouses, hospitals, clinics, and health posts), indexed by n ∈ {0, 1, . . . , F − 1}, with F representing
+
+        the total number of facilities.
+
+   • K: set of antimicrobial product types, indexed by k ∈ {0, 1, . . . , K − 1}
+
+   • A ⊆ N × N : set of directed arcs (i, j) representing feasible transportation routes between facilities;
+
+        flows are permitted only downstream from CMS to DHMT warehouses and lower-level facilities
+
+   • t = {0, 1, . . . , T }: set of discrete time periods representing decision epochs (each typically corresponding
+
+        to two weeks)
+
+
+4.2.2     Parameters
+
+The following parameters describe the physical and operational characteristics of the network. Unless oth-
+
+erwise stated, all parameters are assumed to be known at the beginning of each planning period.
+
+   • Distij : road-network distance between nodes i and j, computed using OSRM outputs (in kilometers
+
+        or meters) [this is also replaceable with Durij , or the estimated travel duration in hours]
+
+   • v: per-unit transportation cost, proportional to either distance or travel time
+
+   • ∆n,k : penalty cost per unit of unmet demand for drug k at node n
+
+
+                                                         14
+   • h: per-unit per-period holding cost for inventory carried over to the next epoch
+
+          (t)
+   • Dn,k : baseline demand for drug k at node n
+
+   • sn : maximum storage capacity at facility n
+
+   • cap: vehicle or route capacity, denoting the maximum shipment quantity per trip
+
+   • M : large constant used in binary activation constraints to link route-use variables and flows
+
+
+4.2.3     Decision Variables
+
+Decision variables represent shipment quantities, inventory levels, unmet demand, and route activations:
+
+         (t)
+   • F(i,j),k : quantity of drug k shipped from facility i to facility j at the beginning of the current period
+
+         (t)
+   • In,k : inventory of drug k at node n at the beginning of the current period
+
+         (t+1)
+   • In,k : inventory of drug k at node n at the end of the current period
+
+         (t+1)
+   • Un,k : unmet demand for drug k at node n at the end of the current period
+
+         (t)
+   • λ(i,j) : number of vehicle trips (or route activations) from i to j at the beginning of the current period
+
+         (t)
+   • y(i,j) : binary variable equal to 1 if route (i, j) is active for the current period, and 0 otherwise
+
+
+4.2.4     Uncertainty Parameters (Robust Extension)
+
+To model uncertainty in demand, we introduce the following quantities:
+
+          (t)
+   • D̄n,k : nominal (expected) demand for drug k at facility n in the current period
+
+         (t)
+   • σn,k : maximum deviation of demand from its nominal value in the current period
+
+         (t)
+   • ξn,k : realized demand deviation, treated as an uncertain variable
+
+   • Γ: uncertainty budget limiting the number of facilities that can simultaneously experience worst-case
+
+        demand shocks
+
+         (t)
+   • zn,k : auxiliary decision variable activating worst-case deviations in the robust formulation for the
+
+        current period
+
+
+
+
+                                                       15
+4.3    Baseline Optimization Model
+
+The deterministic baseline model minimizes total transportation, shortage, and holding costs across the
+
+national distribution network. The formulation is given in Equations (2) through (7):
+
+
+                                                                                 (t)                           (t)    (t+1)
+                                                               X                           X X
+                                    min                   v             Distij λ(i,j) +                 (∆n,k Un,k + hIn,k )                  (2)
+                     F (t) ,λ(t) ,y (t) ,U (t) ,I (t+1)
+                                                              (i,j)∈A                      n∈N k∈K
+
+
+   subject to the following constraints:
+
+
+
+
+                         (t+1)          (t)                          (t)                          (t)          (t)
+                                                          X                            X
+                       In,k         = In,k +                        F(j,n),k −                   F(n,m),k − Dn,k ,      ∀n ∈ N, k ∈ K,        (3)
+                                                    j:(j,n)∈A                    m:(n,m)∈A
+
+                        (t)                         (t)
+               X
+                     F(i,j),k ≤ cap · λ(i,j) ,                                                                                 ∀(i, j) ∈ A,   (4)
+                k
+                           (t)                (t)             (t)
+                        λ(i,j) ≤ M y(i,j) ,                 y(i,j) ∈ {0, 1},                                                   ∀(i, j) ∈ A,   (5)
+                X (t+1)
+                 In,k ≤ sn ,                                                                                                      ∀n ∈ N,     (6)
+                 k
+        (t)     (t+1)         (t)               (t)
+      F(i,j),k , In,k , Un,k ≥ 0,             λ(i,j) ∈ Z+ .                                                                                   (7)
+
+
+   The model ensures inventory balance, enforces capacity and binary activation constraints, and maintains
+
+non-negativity across all decision variables. It provides a tractable benchmark for evaluating total cost and
+
+flow feasibility under nominal demand conditions.
+
+
+4.4    Extension to Robust Optimization
+
+To incorporate demand uncertainty, we follow the robust optimization paradigm introduced by [3] and the
+
+adjustable extensions reviewed by [44]. Demand for each antimicrobial class k at node n is modeled as
+
+
+                                                                      (t)        (t)       (t)
+                                                                    Dn,k = D̄n,k + ξn,k ,                                                     (8)
+
+
+        (t)                                           (t)
+where D̄n,k is nominal demand and ξn,k represents an uncertain deviation. The deviation is bounded within
+
+a budgeted uncertainty set proposed by [4]:
+
+                                                                                                         
+                                                                                           (t)
+                                                          
+                                                         (t)      (t)
+                                                                                       X |ξn,k |          
+                                              UD = ξ : |ξn,k | ≤ σn,k ,                          (t)
+                                                                                                        ≤Γ .                                  (9)
+                                                  
+                                                                                       n,k   σn,k         
+
+
+
+
+                                                                              16
+       (t)
+Here, σn,k denotes the maximum deviation magnitude for node n and drug k, and Γ controls how many
+
+facilities can simultaneously experience worst-case demand surges. Following [4], we define a normalized
+
+variable
+                                                                       (t)
+                                                           (t)     |ξn,k |
+                                                          zn,k =       (t)
+                                                                             ,                                    (10)
+                                                                   σn,k
+
+           (t)
+so that zn,k ∈ [0, 1] expresses the fraction of the worst-case deviation realized at each node–drug pair.
+                       P      (t)
+The budget constraint n,k zn,k ≤ Γ then limits the total intensity of concurrent adverse demand shocks.
+
+This polyhedral structure, introduced by [4], provides a tunable balance between nominal efficiency and
+
+conservative protection, avoiding the excessive conservatism of box uncertainty sets described in the classical
+
+robust optimization framework of [3].
+
+   The robust counterpart enforces feasibility for all ξ ∈ UD , tightening the inventory balance constraint:
+
+
+                    (t+1)      (t)                  (t)                            (t)         (t)    (t)   (t)
+                                         X                            X
+                   In,k     ≥ In,k +               F(j,n),k −                    F(n,m),k − D̄n,k − σn,k zn,k ,   (11)
+                                       j:(j,n)∈A                 m:(n,m)∈A
+
+
+subject to
+                                             X (t)                           (t)
+                                              zn,k ≤ Γ,               0 ≤ zn,k ≤ 1.                               (12)
+                                             n,k
+
+   This formulation, combining the general robust optimization framework of [3] with the budgeted-uncertainty
+
+model of [4], ensures feasibility even when multiple facilities face concurrent demand surges. The uncertainty
+
+budget Γ enables explicit control over the trade-off between robustness and efficiency, consistent with the
+
+adaptive and adjustable formulations discussed by [44].
+
+
+4.5    Medical Demand Estimator (MDE)
+
+One of the central challenges in forecasting antimicrobial requirements in Botswana is the sparsity of high-
+
+frequency clinical data. In order to construct an effective simulation that can test the development of the
+
+model, it is necessary to create a reasonable simulation of drug demand based on available data from point-
+
+prevalence surveys of antimicrobial use across the country. We therefore construct a parametric MLE-derived
+
+estimator of guideline-appropriate antimicrobial demand based on region-level population data and point-
+
+prevalence surveys of infection counts. This section introduces the Medical Demand Estimator (MDE),
+
+establishes the statistical assumptions underlying its construction, and generates a simple proof that the
+
+MDE is a consistent estimator of true clinical demand.
+
+Assumption 1 (Latent Clinical Demand). For each region r and age group a, let Nr,a denote the admissions
+
+in that age group. Let µr,a denote the true incidence rate of clinically indicated infections requiring a given
+
+
+                                                                 17
+antimicrobial. Let δa denote the guideline-recommended total dose for age group a. Then the true guideline-
+
+appropriate antimicrobial demand for region r is
+
+                                                          X
+                                               Dr∗ =              Nr,a µr,a δa .
+                                                              a
+
+
+Assumption 2 (Negative Binomial Incidence Sampling). For each region r and age group a, we observe n
+
+independent draws from a point-prevalence survey:
+
+
+                                                              i.i.d.
+                                    Yr,a,1 , . . . , Yr,a,n       ∼    NegBin(µr,a , k),
+
+
+where µr,a is the mean and k > 0 is a finite overdispersion parameter.
+
+Assumption 3 (NB–GLM Specification). The conditional mean of the Negative Binomial model is given
+
+by the log-link generalized linear model
+
+
+                                                                    ⊤ ∗
+                                                                          
+                                    E[Yr,a,t | Xr,a ] = µr,a = exp Xr,a β ,
+
+
+where Xr,a is a vector of observable covariates (e.g. age dummies and infection category), and β ∗ is the true
+
+regression coefficient vector.
+
+Assumption 4 (Regularity Conditions for NB–GLM MLE). The parameter β ∗ lies in the interior of a
+
+compact parameter space Θ ⊂ Rd . The NB–GLM likelihood is correctly specified and twice continuously dif-
+
+ferentiable. These assumptions ensure existence, identifiability, and consistency of the Maximum Likelihood
+
+Estimator.
+
+Definition 1 (Medical Demand Estimator (MDE)). Let β̂n be the NB–GLM maximum likelihood estimator
+
+of β ∗ . Define the estimated incidence rate as
+
+
+                                                              ⊤
+                                                 µ̂r,a = exp(Xr,a β̂n ).
+
+
+The Medical Demand Estimator for region r is
+
+                                                   X
+                                                                     ⊤
+                                           D̂r =        Nr,a δa exp(Xr,a β̂n ).
+                                                    a
+
+
+Remark 1 (Justification for the Negative Binomial Model). Incidence counts in health systems are typically
+
+overdispersed relative to the Poisson model due to heterogeneous catchment populations, variability in care-
+
+seeking behavior, and clustering of infectious episodes. The Negative Binomial model is therefore widely
+
+
+                                                                  18
+used in epidemiological and pharmacological applications, making it an appropriate parametric choice for
+
+estimating µr,a . These assumptions are further detailed in 2.3.
+
+   We model the incidence counts for region r and age group a using a Negative Binomial generalized
+
+linear model (NB–GLM). Let Yr,a,t denote the number of clinically indicated infections observed in a point-
+
+prevalence survey at time t = 1, . . . , n. The sampling model is
+
+
+                                                                               ⊤
+                               Yr,a,t ∼ NegBin(µr,a , k),          µr,a = exp(Xr,a β),
+
+
+where k > 0 is an overdispersion parameter capturing variance beyond Poisson levels.
+
+Lemma 1 (Continuity of the Demand Function). Define
+
+                                                   X
+                                                                       ⊤
+                                          g(β) =          Nr,a δa exp(Xr,a β).
+                                                      a
+
+
+Then g : Rd → R is continuous and twice-differentiable. Moreover, if Θ ⊂ Rd is compact, then g is Lipschitz
+
+on Θ.
+
+Proof. See Appendix B.1.
+
+Theorem 1 (Consistency of the Medical Demand Estimator under NB Regression). Under Assumptions
+
+1–4, let β̂n be the NB–GLM Maximum Likelihood Estimator and define
+
+                              X                                          X
+                                               ⊤
+                      D̂r =       Nr,a δa exp(Xr,a β̂n ),        Dr∗ =                    ⊤ ∗
+                                                                             Nr,a δa exp(Xr,a β ).
+                              a                                          a
+
+
+Then
+                                                  p
+                                                 → Dr∗
+                                             D̂r −               as n → ∞.
+
+
+Thus, the Medical Demand Estimator D̂r is consistent for the true guideline-appropriate antimicrobial de-
+
+mand Dr∗ .
+
+Proof. See Appendix B.2.
+
+Assumption 5 (Synthetic Microdata Construction). The point-prevalence survey (PPS) reports, for each
+
+antimicrobial class i, only aggregate counts:
+
+
+               Ci = number of prescriptions in class i,             P = number of surveyed patients,
+
+
+
+
+                                                            19
+along with age-group and infection-type distributions of patients. The dataset does not identify which patient
+
+received which antimicrobial.
+
+   To estimate class-specific marginal mean demand, we construct a synthetic patient-level dataset by forming
+
+the Cartesian product
+
+                                            J = {1, . . . , P } × {1, . . . , I},
+
+
+and for each pair (j, i) we attach covariates Xj,i (age group, infection category) and assign an outcome
+
+variable Yj,i equal to the observed PPS proportion of class-i prescriptions within that patient’s covariate
+
+stratum. Thus each (j, i) represents an expected contribution to class-i demand.
+
+Theorem 2 (Within-Patient Correlation Across Antimicrobials Does Not Bias NB–GLM). For each pa-
+
+tient j = 1, . . . , P , let (Yj,1 , . . . , Yj,I ) be the true antimicrobial requirements across I classes, and let
+
+(Xj,1 , . . . , Xj,I ) be the corresponding covariates. Patients are independent across j, but the components
+
+
+                                                       (Yj,1 , . . . , Yj,I )
+
+
+may exhibit arbitrary correlation within patient j.
+
+   Fix an antimicrobial class i. Assume the conditional model
+
+
+                                                                                                  ⊤ ∗
+                                                            
+                         Yj,i | Xj,i ∼ NegBin µi (Xj,i ), ki ,                  µi (Xj,i ) = exp(Xj,i βi ),
+
+
+is correctly specified. Let β̂i maximize the class-i NB–GLM likelihood
+
+                                                       P
+                                                       X
+                                          ℓi (βi ) =         log fi (Yj,i | Xj,i ; βi ).
+                                                       j=1
+
+
+          p
+         → βi∗ even if (Yj,1 , . . . , Yj,I ) are arbitrarily dependent within patient j.
+Then β̂i −
+
+Proof. See Appendix B.3.
+
+
+4.5.1    Remarks on the Implementation of the MDE
+
+To construct facility level estimates of expected antimicrobial demand, we combine district level demographic
+
+information with empirical evidence on antimicrobial use in Botswana. Our approach begins with census
+
+tabulations disaggregated by age group, which provide the demographic composition of each district. These
+
+data form the basis for estimating the aggregate infection and treatment requirements of the populations
+
+served by public health facilities. Because individual level diagnosis and prescribing records are unavailable,
+
+
+                                                                20
+we assume that age specific patterns of antimicrobial need are approximately homogeneous within each
+
+district. This assumption is reasonable in settings where population mobility is limited and where access to
+
+facilities is determined primarily by geographic proximity.
+
+   To link demographic structure to expected antimicrobial use, we incorporate findings from a 2019 na-
+
+tional point prevalence study of antimicrobial consumption [28]. The point prevalence survey (PPS) was
+
+conducted across hospitals selected to represent rural, urban and semiurban areas, and therefore provides
+
+system-wide estimates of antimicrobial use intensity. However, because the PPS does not necessarily release
+
+facility identifiers nor complete stratified rates for each geographic category, we are unable to isolate hospital
+
+specific prevalence values for rural, urban or semiurban locations. Consequently, we apply a single unified
+
+prevalence rate to all districts and facilities. Implicit in this choice is the assumption that the PPS sample
+
+is representative of national prescribing patterns and that differences in antimicrobial use across rurality
+
+categories do not materially affect aggregate demand projections at the district level.
+
+   Assumptions are necessary to translate population structure into facility level estimates. As alluded
+
+previously, we assume that the age distribution of each district accurately reflects the age distribution of
+
+the catchment populations of facilities within that district. Although facilities may serve subpopulations
+
+that differ somewhat from the district average, fine grained catchment demographics are not available, and
+
+district level age profiles provide the most reliable population based approximation. Second, we treat zeros in
+
+facility level stock or dispensing counts as realizations of the same underlying demand and supply processes
+
+rather than as evidence of an alternative mechanism of structural non-utilization. This assumption supports
+
+the use of negative binomial regression in the subsequent analysis rather than a zero inflated specification.
+
+Third, we assume that PPS derived antimicrobial use prevalence is sufficiently stable over time to serve as
+
+an approximate indicator of treatment intensity in the period for which supply chain data are available.
+
+   Facility level demand is then obtained by allocating district level antimicrobial need to facilities in pro-
+
+portion to their catchment populations. Catchment assignment is determined by geographic proximity and
+
+administrative boundaries, consistent with patterns of health service utilisation in Botswana. The resulting
+
+estimator provides a coherent method for translating population characteristics into expected antimicrobial
+
+requirements, forming an essential input to the negative binomial models used to study stock, consumption
+
+and stockout dynamics in the health system.
+
+
+4.6    Affine Decision Rules
+                                                                                                  (t)
+The Negative Binomial model provides baseline estimates of expected antimicrobial demand D̄n,k and disper-
+      (t)
+sion σn,k , but these forecasts are static and do not adapt to realized utilization as time evolves. To introduce
+
+
+
+                                                       21
+reactivity while maintaining tractability, we follow the adjustable robust optimization (ARO) framework
+
+with affine decision rules (ADRs), as surveyed in [44].
+                                                                                                                 (t−1)
+    At the end of each period t−1, facility n observes the realized demand Dn,k                                          and computes the deviation
+
+
+                                                     (t−1)            (t−1)           (t−1)
+                                                    ξn,k     = Dn,k           − D̄n,k .
+
+
+This deviation captures the local demand shock and is used to adjust inter-facility shipments in the subse-
+
+quent period. Because demand itself is exogenous, we apply the affine rule to flows.
+
+    For every arc (u, v) ∈ A and antimicrobial class k, the reactive flow in period t is
+
+
+                                              (t)             (t)               (t)              (t−1)
+                                            Fu→v,k = F̄u→v,k + βu→v,k ξv,k ,                                                                   (13)
+
+
+         (t)                                                                                                                    (t)
+where F̄u→v,k is the nominal shipment obtained from the deterministic model and βu→v,k governs how
+                                                                       (t−1)
+strongly shipments into v respond to the deviation ξv,k .
+
+    Substituting (13) into the inventory balance constraint yields
+
+                                                                                                          
+                         (t+1)        (t)                            (t)             (t)           (t−1)
+                                                    X
+                        In,k     ≥ In,k +                        F̄j→n,k + βj→n,k ξn,k
+                                                j:(j,n)∈A
+                                                                                                                                             (14)
+                                                                       (t)                 (t)           (t−1)           (t)
+                                                     X
+                                            −                        F̄n→m,k + βn→m,k ξn,k                           − Dn,k ,
+                                                m:(n,m)∈A
+
+
+
+which must hold for all deviations ξ (t−1) in the polyhedral uncertainty set
+                                                                                                              
+                                                                                               (t−1)
+                                      
+                                                           (t−1)             (t−1)
+                                                                                           X |ξn,k   |         
+                          U (t−1) =         ξ (t−1) : |ξn,k | ≤ σn,k ,                                (t−1)
+                                                                                                            ≤ Γ  .                             (15)
+                                      
+                                                                                            n,k     σn,k
+                                                                                                               
+
+
+           (t)
+Because Fu→v,k is affine in ξ (t−1) and U (t−1) is polyhedral, the robust counterpart of (14) admits a tractable
+
+linear reformulation. This allows the system to adjust shipments in response to realized demand shocks
+
+while maintaining the computational tractability of the full multi-period distribution network.
+
+
+
+5     Preliminary Results
+
+5.1    Deterministic Model Verification on a Toy Network
+
+To verify the internal consistency of the optimization formulation, a simplified single-period toy model
+
+was implemented in cvxpy using the Gurobi solver. The network consisted of two nodes (A and B), one
+
+
+
+                                                                       22
+pharmaceutical product, and a single directed route from A to B. The formulation included flow-balance,
+
+inventory, storage, vehicle-capacity, and big-M route-activation constraints identical to those used in the full
+
+national model.
+
+    Node A was initialized with 100 units of inventory, while Node B faced a demand of 50 units. The
+
+transport distance was set to 10 km with a per-unit transport cost of v = 2.0, a holding cost of h = 0.5, and
+
+a truck capacity of 100 units. The model minimized total logistics cost, consisting of variable transport and
+
+holding costs, subject to the aforementioned constraints.
+
+    The optimal solution yielded an objective value of 45.0, with a shipment of 50 units from A to B, one
+
+active truck and route, and 50 units remaining in inventory at A. Node B’s demand was fully satisfied, and
+
+all capacity and storage constraints were met exactly. The results confirmed that flow conservation, big-M
+
+activation, and cost-minimization logic were correctly implemented. This test validated the formulation’s
+
+structural soundness prior to scaling to the full multi-period, multi-product national network.
+
+
+5.2     Simulation Framework
+
+The simulation environment provides a controlled setting for evaluating the behavior of the multi-period
+
+antimicrobial distribution model under both deterministic and stochastic realizations of demand. Because
+
+the national supply chain operates in discrete planning cycles, the simulation proceeds over periods t =
+
+0, 1, . . . , T , where each epoch corresponds to a two-week decision interval. At the beginning of each period,
+
+the model receives updated inventory states, observes or draws the demand for that period, and solves
+
+the corresponding distribution problem. This mirrors the operational structure of CMS and the DHMT
+
+warehouses, which rely on periodic replenishment and routing decisions rather than continuous supply flows.
+                                                               (0)
+    Each simulation begins by specifying initial inventories In,k for all facilities and antimicrobials. When
+
+historical CMS or DHMT stock data become available, these values are initialized directly from observed
+
+inventories; until then, reasonable approximations are used in which CMS begins with high baseline stock
+
+while lower-level facilities start with zero or proportionally allocated quantities. Baseline nominal demand
+  (t)
+D̄n,k for each facility–drug pair is obtained from the Medical Demand Estimator (MDE) developed in Section
+
+4.5, which is estimated offline and held fixed throughout each simulation experiment.
+
+    The MDE provides both nominal demand forecasts and estimates of demand variability, which are used to
+
+calibrate the robust uncertainty sets in Section 4.4. In particular, distributional parameters of the Negative
+
+Binomial model are not updated online; instead, they are selected using cross-validation or held-out data
+
+and treated as fixed inputs. Online adaptation occurs only at the level of shipment decisions through affine
+
+recourse.
+
+
+
+                                                      23
+    Demand can be generated in one of two settings. In the deterministic setting, each facility experiences
+                                                      (t)
+demand exactly equal to its nominal value D̄n,k . In stochastic mode, demand is drawn from the fitted
+
+Negative Binomial model,
+
+
+                               (t)                                   (t)
+                             Dn,k ∼ NegBin(mean = D̄n,k , dispersion = κn,k ),
+
+
+where κn,k denotes the estimated overdispersion parameter. These stochastic draws serve exclusively to
+
+evaluate policy performance under realistic demand variability.
+
+    To protect against forecast error, robust optimization is implemented using uncertainty sets centered at
+  (t)                                                                                (t)
+D̄n,k with radii calibrated from the fitted demand variance. Let σn,k denote the corresponding deviation
+
+bounds used in the uncertainty set UD . These parameters are derived from the Negative Binomial variance
+
+and are distinct from the dispersion parameters κn,k of the statistical model.
+
+    When affine decision rules (ADRs) are activated, the simulation updates inter-facility flows according to
+
+the deviation observed in the previous period. After observing
+
+
+                                                (t)            (t)         (t)
+                                            ξn,k = Dn,k − D̄n,k ,
+
+
+the model applies the affine rule
+                                        (t+1)               (t+1)          (t+1)   (t)
+                                      Fu→v,k = F̄u→v,k + βu→v,k ξv,k ,
+
+
+for each arc (u, v) and antimicrobial class k. This rule enables shipment quantities to react to realized
+
+demand shocks while the underlying demand model remains fixed. No online re-estimation of distributional
+
+parameters is performed.
+
+    The model can be executed in nominal, static robust, or adjustable robust modes. In nominal mode,
+                                                                                           (t)
+the deterministic formulation of Section 4.3 is solved each period using D̄n,k . In static robust mode, the
+
+model optimizes against all realizations ξ ∈ UD for fixed uncertainty budget Γ. In adjustable robust mode,
+
+the ADR-updated flows enter the robust constraints, generating a sequence of adaptive shipment decisions
+
+conditioned on previously observed deviations.
+
+    To evaluate operational feasibility, the simulation uses the OSRM-generated distance and travel-time
+
+matrices from Section 4.1 to compute per-period transport costs, route activations, and vehicle utilization.
+
+At the end of the simulation horizon, the model reports total logistics costs, cumulative unmet demand,
+
+inventory trajectories at each facility tier, and the stability of reactive flows under ADRs. These outputs
+
+provide the foundation for comparing deterministic, static robust, and adjustable robust policies under
+
+identical stochastic demand environments.
+
+
+                                                               24
+   Although antimicrobial expiration can be incorporated into inventory propagation, we omit explicit shelf-
+
+life tracking in the present model for simplicity. This allows the core routing and allocation components
+
+to remain in their simplest tractable form. Expiration can be incorporated in future extensions either
+                                          (t)
+through a linear decay term applied to In,k each period or by introducing batch-age tracking constraints
+
+when product-specific shelf-life data become available.
+
+
+5.3     The Gaborone Trial
+
+
+
+
+Figure 4: Unmet penicillin demand in Gaborone over 200 simulation rounds under three policies: determin-
+istic nominal, static robust with Γ = 1.0, and ARO–ADR with Γ = 1.0 and β = 0.1.
+
+
+   To illustrate the behavior of the multi-period model on a realistic sub-network, a proof-of-concept
+
+“Gaborone trial” was implemented using the demand estimates from Section 4.5. The experiment focuses
+
+on penicillin demand for the Gaborone district and compares three policies: (i) the deterministic nominal
+
+model, (ii) a static robust policy with demand uncertainty budget Γ = 1.0 (low, but for study purposes),
+
+and (iii) an ARO–ADR policy with the same robustness budget and conservative affine response parameter
+
+β = 0.1. For each policy, the underlying flows are computed once using the corresponding optimization
+
+formulation from Sections 4.3–4.6 and then evaluated in the stochastic simulation environment of Section
+
+5.2.
+
+
+5.3.1   Expected Admissions Approximation.
+
+Because district-level admission microdata are not available, we estimate age-specific admissions using a
+
+simple hospitalization-rate model. Let P opr,a denote the population in region r and age group a. We define
+
+
+                                                     25
+expected admissions as
+
+                                              Nr,a = ha × P opr,a ,
+
+
+where ha is the hospitalization rate for age group a. For the present paper, we set ha = 0.05 as a reasonable
+
+working value reflecting the proportion of individuals expected to require inpatient care during a two-week
+
+planning period.
+
+   Once the full national model is applied, we will refine ha using empirically derived hospitalization rates
+
+computed from facility catchment areas. In multi-hospital districts, catchment populations assigned via the
+
+spatial linkage framework will allow us to estimate the average proportion of each catchment that is admitted
+
+per decision period, providing a data-driven update to ha that reflects local utilization patterns.
+
+
+5.3.2   First Implementation
+
+Demand in each simulation round is generated from the Negative Binomial distribution implied by the NB-
+
+GLM estimator. For facility n in Gaborone, let D̄n denote the mean penicillin demand and σn the dispersion
+
+parameter. In each trial r, realized demand is drawn as
+
+
+
+                                Dn(r) ∼ NegBin mean = D̄n , dispersion = σn ,
+                                                                           
+
+
+   capturing the substantial overdispersion observed in the PPS data. The deterministic policy is evaluated
+
+by applying the fixed nominal flows to these stochastic realizations, while the static robust policy uses the
+
+flows obtained from the robust model with Γ = 1.0.
+
+   The ARO-ADR policy augments the robust baseline with an affine correction rule on flows. For each arc
+
+(u, v), the shipment in trial r is given by
+
+
+                            (r)
+                           Fu→v = F̄u→v + βu→v ξv(r−1) ,      ξv(r−1) = Dv(r−1) − D̄v ,
+
+
+where F̄u→v is the robust static shipment and βu→v = 0.1 is a small learning coefficient. This rule increases
+
+shipments into facilities that recently experienced positive demand shocks and slightly reduces shipments
+
+when realized demand falls below the NB-GLM forecast, while preserving the tractability of the robust
+
+counterpart.
+
+   Figure 4 reports the total unmet penicillin demand in Gaborone over 200 independent simulation rounds
+
+for the three policies. As expected, the deterministic nominal model yields zero unmet demand because the
+
+allocation is perfectly calibrated to the nominal forecast and is not exposed to stochastic shocks. Under
+
+Negative Binomial demand, both the static robust and ARO-ADR policies exhibit substantial variability
+
+
+                                                       26
+in unmet demand across trials, but the ARO-ADR curve lies systematically below the static robust curve.
+
+Even with conservative coefficients, the affine recourse provides a modest but consistent reduction in unmet
+
+demand by reallocating shipments toward facilities that experience persistent above-forecast utilization. This
+
+trial therefore demonstrates that adjustable robustness can deliver incremental resilience benefits on top of
+
+a static robust baseline, even in a simplified single-drug, single-district setting. Note, however, that the high
+
+unmet demand indicated by the simulation could necessitate either further refinement of the model or simply
+
+reflect a consequence of the variability of the draws from the negative binomial distribution.
+
+
+
+6     Roadmap
+
+As the following four items are all relatively nontrivial tasks that may require a significant amount of data
+
+wrangling and troubleshooting, the goal is to get as much done as possible before the next milestone is due.
+
+
+    • Model refinement. Continue to refine the model, developing ways to visualize the optimization
+
+      results in interesting ways (including map-labeled figures), and find other ways to reduce unmet demand
+
+      as much as possible.
+
+    • Full-scale deterministic model. Scale the current implementation from the Gaborone case study
+
+      to the full national CMS-DHMT-facility network, finalize remaining data cleaning, and verify that the
+
+      deterministic formulation behaves correctly at national scope. It may be prudent to take this step
+
+      district-by-district, then accumulate the results carefully.
+
+    • Full-scale stochastic model (with affine decision updates). Also scale the current implementa-
+
+      tion from the Gaborone case study to the full national CMS-DHMT-facility network, finalize remaining
+
+      data cleaning, and verify that the stochastic formulation behaves correctly at national scope.
+
+    • Incorporation of epidemiological uncertainty. Extend the demand model to include spatio-
+
+      temporal epidemiological dynamics (e.g., SEIR-based shocks or seasonal variation). Determine how
+
+      these disease-driven fluctuations should enter the optimization model and how they affect robustness
+
+      requirements. Include any important derivations for this model addition. If available, run simulations,
+
+      but since the theoretical implementation may take a while, simulations can be left for the period
+
+      between the spring midterm report and final thesis submission.
+
+    • Expiration and DALY-based penalties. Introduce antimicrobial shelf-life into the inventory prop-
+
+      agation rules and evaluate how expiration costs change optimal holding and replenishment decisions.
+
+
+
+
+                                                       27
+      If DALY-based penalties are added for unmet demand, assess how these modify the objective and the
+
+      interpretability of resulting policies.
+
+
+
+
+Appendices
+
+A      Code
+
+All code is publicly available and will be consistently updated at this GitHub repository. Note that gov-
+
+ernment data not authorized for release and Google Maps-generated raw data have been withheld for legal
+
+reasons.
+
+
+
+B     Proofs
+
+B.1     Proof of Lemma 1
+
+Proof. Each term in the full sum of g has the form
+
+
+                                                                 ⊤
+                                           ha (β) = Nr,a δa exp(Xr,a β).
+
+
+                  ⊤
+The mapping β 7→ Xr,a β is linear. The exponential function is smooth on R, hence the composition
+          ⊤
+β 7→ exp(Xr,a β) is smooth. Multiplication by fixed constants Nr,a and δa preserves smoothness. Smooth
+
+functions are closed under addition, so g is twice-differentiable.
+
+    To show Lipschitz continuity on compact Θ, note that the gradient
+
+                                                 X
+                                                                        ⊤
+                                       ∇g(β) =        Nr,a Xr,a δa exp(Xr,a β)
+                                                  a
+
+
+is continuous. By the boundedness theorem, a continuous function on a compact set is bounded, so there
+
+exists L > 0 such that ∥∇g(β)∥ ≤ L for all β ∈ Θ. By the Mean Value Theorem,
+
+
+                                          |g(β1 ) − g(β2 )| ≤ L∥β1 − β2 ∥
+
+
+for all β1 , β2 ∈ Θ, establishing Lipschitz continuity.
+
+
+
+
+                                                          28
+B.2     Proof of Theorem 1
+
+Proof. By Assumptions 3–4, standard maximum likelihood theory for generalized linear models with a log-
+
+link and Negative Binomial variance function guarantees that
+
+
+                                                       p
+                                                      → β∗
+                                                  β̂n −                  as n → ∞
+
+
+   Define the deterministic mapping
+
+                                                        X
+                                                                            ⊤
+                                              g(β) =           Nr,a δa exp(Xr,a β).
+                                                           a
+
+
+                                                                                     p
+                                                            → β ∗ and g is continuous, the Continuous
+The function g : Rd → R is smooth and continuous. Since β̂n −
+
+Mapping Theorem yields
+                                                                     p
+                                                             → g(β ∗ ) = Dr∗ .
+                                               D̂r = g(β̂n ) −
+
+
+   Thus, the Medical Demand Estimator is consistent.
+
+
+B.3     Proof of Theorem 2
+
+Proof. Define the per-observation class-i log-likelihood contribution
+
+
+                                       mi (βi ; Yj,i , Xj,i ) = log fi (Yj,i | Xj,i ; βi ),
+
+
+with score
+
+                                        si (βi ; Yj,i , Xj,i ) = ∇βi mi (βi ; Yj,i , Xj,i ).
+
+
+The total score for class i is
+                                                               P
+                                                               X
+                                             SP,i (βi ) =            si (βi ; Yj,i , Xj,i ).
+                                                               j=1
+
+   Independence is across patients, not classes, so
+
+
+                                          E[SP,i (βi )] = P E[ si (βi ; Y1,i , X1,i ) ].
+
+
+   Apply the law of iterated expectations conditioning on all covariates for patient 1:
+
+
+                         E[si (βi∗ ; Y1,i , X1,i )] = E E[ si (βi∗ ; Y1,i , X1,i ) | X1,1 , . . . , X1,I ] .
+                                                                                                          
+
+
+
+
+                                                                 29
+Class-i score terms depend only on (Y1,i , X1,i ), so
+
+
+                       E[ si (βi∗ ; Y1,i , X1,i ) | X1,1 , . . . , X1,I ] = E[ si (βi∗ ; Y1,i , X1,i ) | X1,i ].
+
+
+   Because the NB model for class i is correctly specified with true parameter βi∗ ,
+
+
+                                              E[ si (βi∗ ; Y1,i , X1,i ) | X1,i ] = 0.
+
+
+   Taking unconditional expectation gives
+
+
+                                                   E[si (βi∗ ; Y1,i , X1,i )] = 0.
+
+
+Thus βi∗ solves the population score equation.
+
+   By compactness, smoothness, and uniqueness of the maximizer, the sample maximizer β̂i of ℓi (βi ) con-
+
+verges in probability to βi∗ .
+
+   Importantly, the joint dependence among Yj,1 , . . . , Yj,I never enters the likelihood or score for class i, and
+
+therefore does not affect consistency.
+
+
+
+References
+
+ [1]   Nurul Salwana Abu Bakar et al. “Count data models for outpatient health services utilisation”. In:
+
+       BMC Medical Research Methodology 22.1 (2022), p. 261. doi: 10.1186/s12874-022-01733-3.
+
+ [2]   Trude Arnesen and Erik Nord. “The value of DALY life: problems with ethics and validity of disability
+
+       adjusted life years”. In: BMJ 319.7222 (1999), pp. 1423–1425. doi: 10.1136/bmj.319.7222.1423.
+
+       url: https://www.bmj.com/content/319/7222/1423.
+
+ [3]   Aharon Ben-Tal, Laurent El Ghaoui, and Arkadi Nemirovski. Robust Optimization. Princeton Univer-
+
+       sity Press, 2009.
+
+ [4]   Dimitris Bertsimas and Melvyn Sim. “The Price of Robustness”. In: Operations Research 52.1 (2004),
+
+       pp. 35–53. doi: 10.1287/opre.1030.0065.
+
+ [5]   Dimitris Bertsimas et al. “From predictions to prescriptions: A data-driven response to COVID-19”.
+
+       In: Health Care Management Science 24.2 (2021), pp. 253–272. doi: 10.1007/s10729-020-09542-0.
+
+
+
+
+                                                                 30
+ [6]   Jonathan Cali and Carlos Avila. Health Financing in Botswana: A Landscape Analysis. Tech. rep.
+
+       United States Agency for International Development (USAID) Technical Report. Bethesda, MD: Health
+
+       Finance & Governance Project (HFG), Abt Associates, Feb. 2016. url: https://p4h.world/app/
+
+       uploads/2024/10/health-financing-landscape-analysis.x80726.pdf.
+
+ [7]   Rajabali Daroudi et al. “Cost per DALY averted in low, middle- and high-income countries: evidence
+
+       from the global burden of disease study to estimate the cost-effectiveness thresholds”. In: Cost Effec-
+
+       tiveness and Resource Allocation 19.1 (2021), pp. 1–10. doi: 10.1186/s12962- 021- 00250- 1. url:
+
+       https://doi.org/10.1186/s12962-021-00250-1.
+
+ [8]   Global action plan on antimicrobial resistance. World Health Organization, 2015.
+
+ [9]   Geofabrik GmbH. OpenStreetMap Data Extracts for Botswana. https://download.geofabrik.de/
+
+       africa/botswana.html. Accessed October 2025. 2025.
+
+[10]   Kannan Govindan, Hassan Mina, and Behrouz Alavi. “A Decision Support System for Demand Man-
+
+       agement in Healthcare Supply Chains Considering the Epidemic Outbreaks: A Case Study of Coron-
+
+       avirus Disease 2019 (COVID-19)”. In: Transportation Research Part E: Logistics and Transportation
+
+       Review 138 (2020), p. 101967. doi: 10.1016/j.tre.2020.101967.
+
+[11]   Samarth Gupta and Saurabh Amin. “Uncertainty-Informed Optimal Resource Allocation with Gaus-
+
+       sian Process Based Bayesian Inference”. In: arXiv preprint arXiv:2307.00032 (2023).
+
+[12]   F. W. Harris. “How many parts to make at once”. In: Factory, The Magazine of Management 10.2
+
+       (1913), pp. 135–136, 152.
+
+[13]   Institute for Health Metrics and Evaluation. Measuring Infectious Causes and Resistance Outcomes for
+
+       Burden Estimation: key findings. 2021. url: https://vizhub.healthdata.org/microbe/?settings=
+
+       eyIxIjoia2V5X2ZpbmRpbmdzIiwiMiI6ImJhciIsIjMiOiJzZXBzaXMiLCI0IjoyMiwiNSI6MSwiNiI6MywiNyI6MywiOCI6MTY
+
+[14]   Eyüp Ensar Işık and Şeyda Topaloglu Yildiz. “Optimizing the COVID-19 cold chain vaccine distribu-
+
+       tion network with medical waste management: A robust optimization approach”. In: Expert Systems
+
+       with Applications 222 (2023), p. 119987. doi: 10.1016/j.eswa.2023.119987.
+
+[15]   Dmitry Ivanov. “Viable supply chain model: integrating agility, resilience and sustainability perspec-
+
+       tives—lessons from and thinking beyond the COVID-19 pandemic”. In: Annals of Operations Research
+
+       319 (2022), pp. 1411–1431. doi: 10.1007/s10479-020-03640-6.
+
+[16]   Md Abdul Kuddus et al. “Mathematical analysis of a two-strain disease model with amplification”.
+
+       In: Chaos, Solitons & Fractals 143 (2021), p. 110594. doi: 10.1016/j.chaos.2020.110594. url:
+
+       https://doi.org/10.1016/j.chaos.2020.110594.
+
+
+                                                      31
+[17]   Ramanan Laxminarayan et al. “Antibiotic resistance—the need for global solutions”. In: The Lancet
+
+       Infectious Diseases 13.12 (2013), pp. 1057–1098.
+
+[18]   Ramanan Laxminarayan and Gardner M. Brown. “Economics of Antibiotic Resistance: A Theory of
+
+       Optimal Use”. In: Journal of Environmental Economics and Management 42.2 (Sept. 2001), pp. 183–
+
+       206. doi: 10.1006/jeem.2000.1156.
+
+[19]   Stanley Mapiki. District Warehouse Location List. Personal communication. African Comprehensive
+
+       HIV/AIDS Partnerships (ACHAP), July 2025. Provides contextual information on the location and
+
+       operation of DHMT warehouses. 2025.
+
+[20]   Ministry of Health and Wellness, Botswana. Standard Operating Procedures Manual for the Logistics
+
+       Management of Health Commodities in Botswana. Accessed June 2025. 2019. url: https://www.moh.
+
+       gov.bw/Publications/SOP_Logistics_Manual.pdf.
+
+[21]   Ministry of Health and Wellness, Republic of Botswana. Botswana Health Facility Master List. Dataset
+
+       maintained by the Ministry of Health and Wellness. Includes coordinates, ownership, and district
+
+       affiliations for all registered health facilities in Botswana. 2025.
+
+[22]   Ministry of Health and Wellness, Republic of Botswana. National List of Priority Antimicrobials. Issued
+
+       by the Antimicrobial Stewardship Program, Ministry of Health and Wellness. Defines antimicrobials
+
+       prioritized for national procurement and monitoring. 2023.
+
+[23]   Nkaelang Modutlwa, Sehlule Moyo, and Ndumiso Tshuma. “The supply and demand challenges of
+
+       medicines at Princess Marina Hospital, Gaborone, Botswana”. In: International Journal of Innovation
+
+       in Management Economics and Social Sciences 3.3 (Aug. 2023). CC BY 4.0, accessed via ResearchGate,
+
+       pp. 1–9. doi: 10 . 59615 / ijimes . 3 . 3 . 1. url: https : / / www . researchgate . net / publication /
+
+       376458564_The_supply_and_demand_challenges_of_medicines_at_Princess_Marina_Hospital_
+
+       Gaborone_Botswana.
+
+[24]   Marasi Mwencha and James E. Rosen. Better Data Visibility & Data Use Result in Lower Cost and Im-
+
+       proved Performance in Medicine Supply Chains. Preprint arXiv:1609.09065. Presented at the Datafor-
+
+       Good Exchange, September 2016. arXiv, Sept. 2016. doi: 10.48550/arXiv.1609.09065. url: https:
+
+       //arxiv.org/abs/1609.09065.
+
+[25]   Mohsen Naghavi et al. “Global burden of bacterial antimicrobial resistance 1990–2021: A systematic
+
+       analysis with forecasts to 2050”. In: The Lancet 404.10459 (Sept. 2024), pp. 1199–1226. doi: 10.1016/
+
+       s0140-6736(24)01867-1.
+
+
+
+
+                                                         32
+[26]   Steven Nahmias. “Perishable Inventory Theory: A Review”. In: Operations Research 30.4 (1982),
+
+       pp. 680–708. doi: 10.1287/opre.30.4.680.
+
+[27]   OpenStreetMap contributors. Nominatim: OpenStreetMap Geocoding Service. https://nominatim.
+
+       openstreetmap.org/. Accessed October 2025. 2025.
+
+[28]   Bene D. Anand Paramadhas et al. “Point prevalence study of antimicrobial use among hospitals across
+
+       Botswana: findings and implications”. In: Expert Review of Anti-infective Therapy 17.7 (2019), pp. 535–
+
+       546. doi: 10.1080/14787210.2019.1629288.
+
+[29]   Eduardo Perea-López et al. “A model predictive control strategy for supply chain optimization”. In:
+
+       Computers & Chemical Engineering 27.8-9 (2003), pp. 1201–1218. doi: 10.1016/S0098- 1354(03)
+
+       00047-4.
+
+[30]   Yael Perlman and Ilya Levner. “Perishable Inventory Management in Healthcare”. In: Journal of
+
+       Service Science and Management 7.1 (2014), pp. 11–17. doi: 10.4236/jssm.2014.71002.
+
+[31]   Project OSRM. Open Source Routing Machine (OSRM) – Table Service API Documentation. Accessed
+
+       October 2025. 2025.
+
+[32]   Amit Prasad Rath and Nihar Ranjan Das. “The Role of Drug Utilization in Optimal Pharmacological
+
+       Treatment”. In: Annals of Medical and Health Sciences Research 14.2 (Supplement 8) (2024), pp. 930–
+
+       936. doi: 10.54608/annalsmedical.2024.S8. url: https://www.amhsr.org/articles/the-role-
+
+       of-drug-utilization-in-optimal-pharmacological--treatment.pdf.
+
+[33]   Republic of Botswana. Botswana Commits to Supporting AMR Strategy. Accessed: 2025-06-11. 2023.
+
+       url: https://dailynews.gov.bw/news-detail/74903.
+
+[34]   Republic of Botswana. CMS drug availability at 46 per cent. https://dailynews.gov.bw/news-
+
+       detail/65848. Accessed: 2025-06-11. 2022.
+
+[35]   Republic of Botswana. Robust supply chain system critical in medicine distribution. https://dailynews.
+
+       gov.bw/news-detail/82311. Accessed: 2025-06-11. 2024.
+
+[36]   Reuters. “Botswana declares public health emergency as clinics run out of medicine”. In: Reuters
+
+       (Aug. 2025). Accessed October 2025. url: https : / / www . reuters . com / business / healthcare -
+
+       pharmaceuticals/botswana-declares-public-health-emergency-clinics-run-out-medicine-
+
+       2025-08-25/.
+
+[37]   Alex Secora et al. “Drug availability adjustments in population-based studies of prescription opioid
+
+       abuse”. In: Pharmacoepidemiology and Drug Safety 26.2 (2017), pp. 180–191. doi: 10.1002/pds.4139.
+
+
+
+                                                      33
+[38]   Han Shih and Suchithra Rajendran. “A Stochastic Blood Supply Chain Model with Perishable Inven-
+
+       tory”. In: Journal of Healthcare Engineering 2020 (2020), p. 8881751. doi: 10.1155/2020/8881751.
+
+       url: https://doi.org/10.1155/2020/8881751.
+
+[39]   Statistics Botswana. 2022 Population and Housing Census. Official census data providing tract-level
+
+       population and demographic distributions for Botswana. 2022.
+
+[40]   Emily L. Tucker and Mark S. Daskin. “Pharmaceutical supply chain reliability and effects on drug
+
+       shortages”. In: Socio-Economic Planning Sciences 82 (2022), p. 101175. doi: 10.1016/j.seps.2022.
+
+       101175. url: https://doi.org/10.1016/j.seps.2022.101175.
+
+[41]   U.S. Food and Drug Administration. DailyMed: Current Medication Labeling Database. Accessed 2025-
+
+       10-30. 2025. url: https://dailymed.nlm.nih.gov/.
+
+[42]   USAID Global Health Supply Chain Program - Procurement and Supply Management. Botswana
+
+       Warehousing and Storage Assessment. Tech. rep. Prepared by GHSC-PSM and Ministry of Health and
+
+       Wellness. Gaborone, Botswana: USAID, 2021. url: https://www.ghsupplychain.org.
+
+[43]   World Health Organization. Botswana: Tripartite AMR Country Self-Assessment Survey (TrACSS)
+
+       2021. Accessed: 2025-06-11. 2021. url: https : / / cdn . who . int / media / docs / default - source /
+
+       antimicrobial-resistance/amr-spc-npm/tracss/tracss-2021-botswana.pdf.
+
+[44]   Ihsan Yanikoglu, Bram L. Gorissen, and Dick den Hertog. “A survey of adjustable robust optimization”.
+
+       In: European Journal of Operational Research 277.3 (2018), pp. 799–813. doi: 10.1016/j.ejor.2018.
+
+       08.031.
+
+[45]   Gang Yu. “Robust economic order quantity models”. In: European Journal of Operational Research
+
+       100.3 (1997), pp. 482–493. doi: 10.1016/S0377-2217(95)00328-2.
+
+
+
+
+                                                     34
+
