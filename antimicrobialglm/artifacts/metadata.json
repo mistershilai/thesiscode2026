@@ -1,0 +1,50 @@
+{
+  "classes": [
+    "Aminoglycosides",
+    "Amphenicols",
+    "Carbapenems",
+    "Cephalosporins",
+    "Glycopeptides",
+    "Lincosamides",
+    "Macrolides",
+    "Nitroimidazoles",
+    "Penicillins",
+    "Quinolones",
+    "Sulphonamides",
+    "Tetracyclines"
+  ],
+  "hospital_types": [
+    "Specialist",
+    "Tertiary",
+    "District",
+    "Primary"
+  ],
+  "age_levels": [
+    "1-5",
+    "11 to 15 years",
+    "16 to 20 years",
+    "21 to 25 years",
+    "26 to 30 years",
+    "31 to 35 years",
+    "36 to 40 years",
+    "41 to 45 years",
+    "46 to 50 years",
+    "51 to 55 years",
+    "56 to 60 years",
+    "6 to 10 years",
+    "61 to 65 years",
+    "66+",
+    "<1"
+  ],
+  "inf_levels": [
+    "CAI",
+    "HAI",
+    "HBCI",
+    "NIC"
+  ],
+  "P_patients": 711.0,
+  "total_prescriptions": 982,
+  "alpha_hat": 5.541967528051009e-07,
+  "kappa_hat": 1804413.315196162,
+  "nb2_variance": "Var(Y|X) = mu + alpha * mu^2 = mu + mu^2 / kappa"
+}

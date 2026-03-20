@@ -1,8 +1,10 @@
 import pandas as pd
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
+import os
+import json
 
-def estimate_antimicrobial_demand(pop_age_df, by=["agegroup", "Class"]):
+def estimate_antimicrobial_demand(pop_age_df, by=["agegroup", "Class"], export_dir=None, return_mu=False):
     """
     Estimate antimicrobial demand by age group and class using negative binomial GLM.
     Args:
@@ -101,6 +103,8 @@ def estimate_antimicrobial_demand(pop_age_df, by=["agegroup", "Class"]):
         sub["mu"] = mu_predictions[class_name]
         prediction_frames.append(sub[["agegroup", "infectionstatus", "Class", "mu"]])
     glm_output = pd.concat(prediction_frames, ignore_index=True)
+    # Compute mean mu by agegroup and Class (useful for external calibration)
+    mu_by_age_class = glm_output.groupby(["agegroup", "Class"], as_index=False)["mu"].mean()
     # --- Merge with population breakdown ---
     # Detect age group column name (could be 'agegroup' or 'AgeGroup')
     age_col = None
@@ -132,5 +136,23 @@ def estimate_antimicrobial_demand(pop_age_df, by=["agegroup", "Class"]):
         glm_aggregated["demand_estimate"] = glm_aggregated["mu"] * glm_aggregated["Population"]
     else:
         glm_aggregated["demand_estimate"] = glm_aggregated["mu"]
-    
+
+    # Optionally export results for downstream calibration (mu and overdispersion)
+    if export_dir is not None:
+        try:
+            os.makedirs(export_dir, exist_ok=True)
+            out_csv = os.path.join(export_dir, "glm_output.csv")
+            out_json = os.path.join(export_dir, "overdispersion.json")
+            glm_aggregated[by_mapped + ["demand_estimate"]].to_csv(out_csv, index=False)
+            # also export mean mu table for calibration
+            mu_csv = os.path.join(export_dir, "mu_by_age_class.csv")
+            mu_by_age_class.to_csv(mu_csv, index=False)
+            with open(out_json, "w") as jf:
+                json.dump(overdispersion, jf, indent=2)
+        except Exception:
+            # Fail silently here; exporting is convenience, not required for estimation
+            pass
+
+    if return_mu:
+        return glm_aggregated[by_mapped + ["demand_estimate"]], overdispersion, mu_by_age_class
     return glm_aggregated[by_mapped + ["demand_estimate"]], overdispersion
