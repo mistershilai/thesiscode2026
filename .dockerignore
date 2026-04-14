@@ -1,0 +1,10 @@
+node_modules
+app/frontend/node_modules
+app/frontend/dist
+__pycache__
+*.pyc
+.venv
+.git
+*.ipynb
+osrm_project/*.osm.pbf
+gaborone_test/
