@@ -2,13 +2,13 @@
 .env
 app/frontend/.env.*
 
-# ── App (hidden for now) ──
+# App (hidden for now)
 app/
 
-# ── Claude Code config ──
+# Claude Code config
 .claude/
 
-# ── Data files (general) ──
+# Data files (general)
 *.csv
 !distance_matrix.csv       # <-- keep your derived distance matrix
 !aggregated_results.csv    # <-- keep safe analytical outputs if needed
@@ -22,26 +22,26 @@ app/
 *.xls
 *.bak
 
-# ── Census data ──
+# Census data
 *geocoded*.csv
 census_villages_geocoded.csv
 census_villages_geocoded_google.csv
 
-# ── CMS proprietary data ──
+# CMS proprietary data
 national_pipeline/cms_results*.parquet
 national_pipeline/antimicrobials.xlsx
 national_pipeline/antimicrobials.csv
 
-# ── Antimicrobial data ──
+# Antimicrobial data
 priorityantimicrobialsbotswana.xlsx
 priorityantimicrobialsbotswana.csv
 antimicrobialglm/facilities_with_warehouses.numbers
 antimicrobialglm/DocumentedInfectionbyAgeGroup.numbers
 
-# ── User / auth data ──
+# User / auth data
 kaelo_users.db
 
-# ── Python / build ──
+# Python / build
 __pycache__/
 *.pyc
 *.pyo
