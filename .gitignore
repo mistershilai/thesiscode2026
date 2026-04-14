@@ -2,6 +2,9 @@
 .env
 app/frontend/.env.*
 
+# ── App (hidden for now) ──
+app/
+
 # ── Claude Code config ──
 .claude/
 
