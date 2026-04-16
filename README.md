@@ -41,7 +41,7 @@ The pipeline goes from raw census/facility data through geocoding, distance-matr
   - `run_cms_two.py` - batch script for CMS simulation runs
   - `results/` - simulation output (parquet files, figures)
 - `nearest_facility.ipynb` - standalone nearest-facility assignment using the facility and population data
-- `app/` - web application (frontend + backend) for interactive visualization
+- `app/` - web application (frontend + backend) for interactive visualization (temporarily withheld while app is developed and all private data is removed. app is only to be used by the Botswana government)
   - `start.sh` - launch script
 
 ### Supporting files
