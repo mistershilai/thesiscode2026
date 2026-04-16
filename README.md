@@ -59,7 +59,7 @@ The pipeline goes from raw census/facility data through geocoding, distance-matr
 
 ## Data privacy and regeneration
 
-To comply with Google Maps Platform Terms of Service and Botswana Ministry of Health data-sharing restrictions, this repository **excludes** all raw geocoded data and private credentials.
+To comply with Google Maps Platform Terms of Service and Botswana Ministry of Health data-sharing restrictions, this repository **excludes** all raw geocoded data and private credentials, as well as datasets regarding antimicrobial use and procurement. 
 
 **Excluded (via .gitignore):**
 - `.env` - contains private Google API key
@@ -71,6 +71,8 @@ These files must be regenerated locally with a valid API key before running the 
 ---
 
 ## Reproducibility
+
+Note: as all datasets related to Botswana government data are not public, one must generate own datasets to test reproducibility.
 
 1. **Create a `.env` file** inside `botswana_geocode/`:
    ```
