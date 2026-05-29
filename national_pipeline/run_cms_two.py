@@ -1,5 +1,5 @@
 """
-run_cms_two.py  –  CMS simulation pipeline for Princeton Research Computing
+run_cms_two.py  -  CMS simulation pipeline for Princeton Research Computing
 ----------------------------------------------------------------------
 Runs the 2025-26 / 2026-27 CMS simulation across all Botswana DHMTs.
 Uses ProcessPoolExecutor to run regions in parallel (one worker per region,
@@ -9,8 +9,8 @@ Usage:
     python run_cms.py
 
 Output:
-    results/cms_results_two.parquet   – main metrics (all regions × models × years)
-    results/cms_failures_two.csv      – any regions that errored
+    results/cms_results_two.parquet   - main metrics (all regions × models × years)
+    results/cms_failures_two.csv      - any regions that errored
 """
 
 # Imports
@@ -26,7 +26,7 @@ import pandas as pd
 import cvxpy as cp
 from scipy.spatial import cKDTree
 
-# Paths - adjust if your project layout differs
+# Paths - adjust if project layout differs
 BASE_DIR   = Path(__file__).parent                   # directory of this script
 DATA_DIR   = BASE_DIR / ".."                         # parent dir has most data
 OUT_DIR    = BASE_DIR / "results"
