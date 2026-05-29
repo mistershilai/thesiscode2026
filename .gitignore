@@ -8,6 +8,8 @@ app/frontend/.env.*
 # User / auth data
 kaelo_users.db
 
+docs/methodology_separation.md
+
 # Backups
 *.ipynb.backup.*
 *.bak
