@@ -12,6 +12,34 @@ kaelo_users.db
 *.ipynb.backup.*
 *.bak
 
+# OSRM data (regenerated on deploy from the botswana-latest.osm.pbf download)
+osrm_project/botswana-latest.*
+
+# Spreadsheet exports not read by code
+*.numbers
+
+# Generated figures not consumed by code
+kappa.png
+unmetdemand.png
+unmetdemandgabs.png
+seasonal_multiplier.png
+seasonal_unmet_with_multiplier.png
+seasonal_unmet_no_multiplier.png
+national_pipeline/cms_full_metrics_2526.png
+national_pipeline/cms_full_metrics_2627.png
+national_pipeline/cms_appendix_maps_2526.png
+national_pipeline/cms_appendix_maps_2627.png
+national_pipeline/botswana_appendix_maps.png
+national_pipeline/cms_avg_unmet_bar.png
+
+# Intermediate data not read by code
+national_pipeline/cms_results_partial.parquet
+national_pipeline/gaborone_facilities_filtered.csv
+national_pipeline/greater_gaborone_facilities_filtered.csv
+national_pipeline/greater_gaborone_population_nearest_facilities.csv
+national_pipeline/greater_gaborone_population_nearest_facilities_osrm.csv
+priorityantimicrobialsbotswana.csv
+
 # Python / build
 __pycache__/
 *.pyc
