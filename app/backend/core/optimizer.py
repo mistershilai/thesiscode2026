@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 
 from .data_loader import app_data, clean_fac_name
 
-# ── District mapping ──────────────────────────────────────────────────────────
+# District mapping 
 DISTRICT_MAP = {
     "barolong": "goodhope", "central bobonong": "bobirwa",
     "central boteti": "boteti", "central kalahari game reserve": "kgalagadi north",
@@ -118,9 +118,7 @@ def build_node_demand_matrix(demand_fac_long: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 # REGION INSTANCE BUILDER
-# ══════════════════════════════════════════════════════════════════════════════
 
 def build_region_instance(target_dhmt: str) -> dict:
     d = app_data
@@ -346,9 +344,7 @@ def build_region_instance(target_dhmt: str) -> dict:
     }
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 # CMS INSTANCE BUILDER
-# ══════════════════════════════════════════════════════════════════════════════
 
 def build_cms_region_instance(region: str, scenario: str = "2526") -> dict:
     d = app_data
@@ -372,9 +368,7 @@ def build_cms_region_instance(region: str, scenario: str = "2526") -> dict:
     return {**base, "mu_mat": mu_mat, "sigma_mat": sigma_mat, "proc_cost": d.cms_proc_cost}
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 # SIMULATION: run T periods of a policy under NB demand draws
-# ══════════════════════════════════════════════════════════════════════════════
 
 def _resolve_costs(cost_input, classes):
     if np.isscalar(cost_input):
@@ -666,9 +660,7 @@ def run_simulation(
     return pd.DataFrame(metrics)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 # PLANNING MODE: solve one period with real inventory, return shipment plan
-# ══════════════════════════════════════════════════════════════════════════════
 
 def run_planning(
     instance: dict,

@@ -1,6 +1,5 @@
 """
 run_cms_two.py  -  CMS simulation pipeline for Princeton Research Computing
-----------------------------------------------------------------------
 Runs the 2025-26 / 2026-27 CMS simulation across all Botswana DHMTs.
 Uses ProcessPoolExecutor to run regions in parallel (one worker per region,
 capped by MAX_WORKERS to stay within 32 GB memory).
