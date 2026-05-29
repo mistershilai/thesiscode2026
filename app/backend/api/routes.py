@@ -9,7 +9,15 @@ import pandas as pd
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 
-from ..core.data_loader import app_data, BASE_DIR, PIPELINE_DIR
+import re
+
+from ..core.data_loader import (
+    app_data,
+    BASE_DIR,
+    PIPELINE_DIR,
+    CMS_SCENARIOS_DIR,
+    BUILTIN_SCENARIO_IDS,
+)
 from ..core.optimizer import (
     build_region_instance,
     build_cms_region_instance,
@@ -78,14 +86,20 @@ def get_districts_geojson():
 @router.get("/cms/products")
 def get_cms_products():
     cms = app_data.cms_active
+    scenario_ids = [s["id"] for s in app_data.list_scenarios()]
     records = []
     for code, row in cms.iterrows():
+        biweekly = {
+            sid: float(row.get(f"biweekly_{sid}", 0) or 0) for sid in scenario_ids
+        }
         records.append({
             "product_code": str(code),
             "description": str(row.get("description", "")),
             "unit_price_bwp": float(row.get("unit_price_bwp", 0)),
-            "biweekly_2526": float(row.get("biweekly_2526", 0)),
-            "biweekly_2627": float(row.get("biweekly_2627", 0)),
+            # kept for backward compatibility
+            "biweekly_2526": biweekly.get("2526", 0.0),
+            "biweekly_2627": biweekly.get("2627", 0.0),
+            "biweekly": biweekly,
         })
     return records
 
@@ -104,15 +118,17 @@ def add_cms_product(body: dict):
     if code in cms.index:
         raise HTTPException(400, f"Product {code} already exists")
 
-    new_row = pd.Series({
-        "description": desc,
-        "unit_price_bwp": price,
-        "biweekly_2526": biweekly,
-        "biweekly_2627": biweekly,
-    }, name=code)
+    new_vals = {"description": desc, "unit_price_bwp": price}
+    # seed the new product's demand into every scenario column that exists
+    for col in cms.columns:
+        if col.startswith("biweekly_"):
+            new_vals[col] = biweekly
+    new_row = pd.Series(new_vals, name=code)
     app_data.cms_active = pd.concat([cms, new_row.to_frame().T])
     app_data.cms_proc_cost = app_data.cms_active["unit_price_bwp"]
     _save_cms()
+    for name in getattr(app_data, "custom_scenarios", []):
+        _save_scenario(name)
     return {"status": "ok", "product_code": code, "total_products": len(app_data.cms_active)}
 
 
@@ -131,7 +147,88 @@ def remove_cms_product(body: dict):
     app_data.cms_active = cms.drop(index=code)
     app_data.cms_proc_cost = app_data.cms_active["unit_price_bwp"]
     _save_cms()
+    for name in getattr(app_data, "custom_scenarios", []):
+        _save_scenario(name)
     return {"status": "ok", "removed": code, "description": desc, "total_products": len(app_data.cms_active)}
+
+
+# CMS demand scenarios (extra biweekly_<name> columns, persisted under cms_scenarios/)
+
+_SCENARIO_NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
+
+
+def _save_scenario(name: str):
+    """Write a custom scenario's per-product biweekly demand to its own CSV."""
+    col = f"biweekly_{name}"
+    CMS_SCENARIOS_DIR.mkdir(parents=True, exist_ok=True)
+    df = app_data.cms_active[[col]].rename(columns={col: "biweekly"})
+    df.index.name = "product_code"
+    df.to_csv(CMS_SCENARIOS_DIR / f"{name}.csv")
+
+
+@router.get("/cms/scenarios")
+def list_cms_scenarios():
+    return app_data.list_scenarios()
+
+
+@router.post("/cms/scenarios/add")
+def add_cms_scenario(body: dict):
+    """Create a new demand scenario by duplicating an existing one."""
+    name = str(body.get("name", "")).strip()
+    copy_from = str(body.get("copy_from", "")).strip()
+    if not _SCENARIO_NAME_RE.match(name):
+        raise HTTPException(400, "Name must be 1-40 chars: letters, numbers, '_' or '-'")
+    if name in BUILTIN_SCENARIO_IDS:
+        raise HTTPException(400, f"'{name}' is a reserved built-in scenario id")
+    if app_data.scenario_exists(name):
+        raise HTTPException(400, f"Scenario '{name}' already exists")
+    if not app_data.scenario_exists(copy_from):
+        raise HTTPException(400, f"Source scenario '{copy_from}' not found")
+
+    app_data.cms_active[f"biweekly_{name}"] = app_data.cms_active[f"biweekly_{copy_from}"].copy()
+    app_data.custom_scenarios.append(name)
+    _save_scenario(name)
+    return {"status": "ok", "scenarios": app_data.list_scenarios()}
+
+
+@router.post("/cms/scenarios/update")
+def update_cms_scenario(body: dict):
+    """Update per-product biweekly demand values for a custom scenario."""
+    name = str(body.get("name", "")).strip()
+    values = body.get("values", {}) or {}
+    if name in BUILTIN_SCENARIO_IDS:
+        raise HTTPException(400, "Built-in scenarios cannot be edited")
+    if not app_data.scenario_exists(name):
+        raise HTTPException(404, f"Scenario '{name}' not found")
+
+    col = f"biweekly_{name}"
+    updated = 0
+    for code, val in values.items():
+        if code in app_data.cms_active.index:
+            try:
+                app_data.cms_active.loc[code, col] = float(val)
+                updated += 1
+            except (TypeError, ValueError):
+                continue
+    _save_scenario(name)
+    return {"status": "ok", "updated": updated, "scenarios": app_data.list_scenarios()}
+
+
+@router.post("/cms/scenarios/remove")
+def remove_cms_scenario(body: dict):
+    """Delete a custom scenario (built-ins cannot be removed)."""
+    name = str(body.get("name", "")).strip()
+    if name in BUILTIN_SCENARIO_IDS:
+        raise HTTPException(400, "Built-in scenarios cannot be removed")
+    if name not in getattr(app_data, "custom_scenarios", []):
+        raise HTTPException(404, f"Scenario '{name}' not found")
+
+    app_data.cms_active = app_data.cms_active.drop(columns=[f"biweekly_{name}"], errors="ignore")
+    app_data.custom_scenarios.remove(name)
+    path = CMS_SCENARIOS_DIR / f"{name}.csv"
+    if path.exists():
+        path.unlink()
+    return {"status": "ok", "removed": name, "scenarios": app_data.list_scenarios()}
 
 
 OSRM_URL = os.environ.get("OSRM_URL", "http://localhost:5001")

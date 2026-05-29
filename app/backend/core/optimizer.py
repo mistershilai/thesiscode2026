@@ -350,6 +350,8 @@ def build_cms_region_instance(region: str, scenario: str = "2526") -> dict:
     d = app_data
     base = build_region_instance(region)
     col = f"biweekly_{scenario}"
+    if col not in d.cms_active.columns:
+        raise ValueError(f"Unknown CMS scenario '{scenario}'")
     national_dem = d.cms_active[col]
     demand_nodes = [n for n in base["nodes"] if n != base["CMS"]]
     shares = d.pop_fac_share.reindex(demand_nodes).fillna(0.0)

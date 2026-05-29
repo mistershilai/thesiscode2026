@@ -23,6 +23,22 @@ export interface Region {
   source_node: string;
 }
 
+export interface Scenario {
+  id: string;
+  label: string;
+  builtin: boolean;
+  total_biweekly: number;
+}
+
+export interface CmsProduct {
+  product_code: string;
+  description: string;
+  unit_price_bwp: number;
+  biweekly_2526: number;
+  biweekly_2627: number;
+  biweekly: Record<string, number>;
+}
+
 export interface Facility {
   name: string;
   type: string;
@@ -150,8 +166,23 @@ export const api = {
   getRegionFacilities: (region: string) =>
     fetchJSON<Facility[]>(`/regions/${encodeURIComponent(region)}/facilities`),
   getFacilitiesGeoJSON: () => fetchJSON<GeoJSON>("/facilities/geojson"),
-  getCmsProducts: () =>
-    fetchJSON<{ product_code: string; description: string; unit_price_bwp: number; biweekly_2526: number; biweekly_2627: number }[]>("/cms/products"),
+  getCmsProducts: () => fetchJSON<CmsProduct[]>("/cms/products"),
+  getScenarios: () => fetchJSON<Scenario[]>("/cms/scenarios"),
+  addScenario: (name: string, copyFrom: string) =>
+    fetchJSON<{ status: string; scenarios: Scenario[] }>("/cms/scenarios/add", {
+      method: "POST",
+      body: JSON.stringify({ name, copy_from: copyFrom }),
+    }),
+  updateScenario: (name: string, values: Record<string, number>) =>
+    fetchJSON<{ status: string; updated: number; scenarios: Scenario[] }>("/cms/scenarios/update", {
+      method: "POST",
+      body: JSON.stringify({ name, values }),
+    }),
+  removeScenario: (name: string) =>
+    fetchJSON<{ status: string; removed: string; scenarios: Scenario[] }>("/cms/scenarios/remove", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }),
   getDistrictsGeoJSON: () => fetchJSON<any>("/districts/geojson"),
   getRegionDemand: (region: string, scenario = "2526", useCms = true) =>
     fetchJSON<RegionDemand>(

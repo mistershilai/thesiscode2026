@@ -10,9 +10,17 @@ import numpy as np
 import pandas as pd
 from scipy.spatial import cKDTree
 
-# Paths 
+# Paths
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent  # thesiscode2026/
 PIPELINE_DIR = BASE_DIR / "national_pipeline"
+CMS_SCENARIOS_DIR = PIPELINE_DIR / "cms_scenarios"
+
+# Built-in CMS demand scenarios (columns derived directly from antimicrobials.csv).
+BUILTIN_SCENARIOS = [
+    {"id": "2526", "label": "2025-26"},
+    {"id": "2627", "label": "2026-27"},
+]
+BUILTIN_SCENARIO_IDS = {s["id"] for s in BUILTIN_SCENARIOS}
 
 
 def _clean_matrix(df: pd.DataFrame) -> pd.DataFrame:
@@ -99,6 +107,7 @@ class AppData:
         self._load_age_data()
         self._load_glm_artifacts()
         self._load_cms_data()
+        self._load_cms_scenarios()
         self._compute_facility_assignments()
         self._compute_pop_shares()
         self.loaded = True
@@ -234,6 +243,42 @@ class AppData:
         cms_active = cms_active.set_index("product_code")
         self.cms_active = cms_active
         self.cms_proc_cost = cms_active["unit_price_bwp"]
+
+    # Custom CMS scenarios (extra biweekly_<name> demand columns persisted on disk)
+    def _load_cms_scenarios(self):
+        self.custom_scenarios = []
+        if not CMS_SCENARIOS_DIR.exists():
+            return
+        for path in sorted(CMS_SCENARIOS_DIR.glob("*.csv")):
+            name = path.stem
+            if name in BUILTIN_SCENARIO_IDS:
+                continue
+            try:
+                df = pd.read_csv(path).set_index("product_code")
+            except Exception:
+                continue
+            col = f"biweekly_{name}"
+            series = pd.to_numeric(df["biweekly"], errors="coerce")
+            self.cms_active[col] = series.reindex(self.cms_active.index).fillna(0.0)
+            self.custom_scenarios.append(name)
+
+    def list_scenarios(self) -> list:
+        """Return all available demand scenarios (built-in + custom)."""
+        out = []
+        for s in BUILTIN_SCENARIOS:
+            col = f"biweekly_{s['id']}"
+            total = float(self.cms_active[col].sum()) if col in self.cms_active.columns else 0.0
+            out.append({"id": s["id"], "label": s["label"], "builtin": True,
+                        "total_biweekly": round(total, 2)})
+        for name in getattr(self, "custom_scenarios", []):
+            col = f"biweekly_{name}"
+            total = float(self.cms_active[col].sum()) if col in self.cms_active.columns else 0.0
+            out.append({"id": name, "label": name, "builtin": False,
+                        "total_biweekly": round(total, 2)})
+        return out
+
+    def scenario_exists(self, scenario_id: str) -> bool:
+        return f"biweekly_{scenario_id}" in self.cms_active.columns
 
     # Facility assignments
     def _compute_facility_assignments(self):

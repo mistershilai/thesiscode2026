@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import type { Region, RegionDemand, OptimizationResult } from "../api/client";
 import ResultsView from "../components/ResultsView";
 import DemandEditor from "../components/DemandEditor";
+import ScenarioManager from "../components/ScenarioManager";
 
 const STRATEGIES = [
   { value: "nominal", label: "Nominal (Mean Demand)" },
@@ -162,16 +163,7 @@ export default function Optimize() {
             </select>
           </label>
 
-          <label>
-            CMS Scenario <span className="label-tswana">Maemo a CMS</span>
-            <select
-              value={scenario}
-              onChange={(e) => setScenario(e.target.value)}
-            >
-              <option value="2526">2025-26</option>
-              <option value="2627">2026-27</option>
-            </select>
-          </label>
+          <ScenarioManager value={scenario} onChange={setScenario} />
 
           <label>
             Periods (biweekly) <span className="label-tswana">Dinako</span>
