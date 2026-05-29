@@ -4,7 +4,6 @@ import requests
 import pandas as pd
 from dotenv import load_dotenv
 
-# private Google API key
 load_dotenv()
 API_KEY = os.getenv("GOOGLE_API_KEY")
 if not API_KEY:
@@ -13,7 +12,6 @@ if not API_KEY:
 BASE_URL = "https://maps.googleapis.com/maps/api/geocode/json"
 df = pd.read_csv("../census_villages_geocoded.csv")
 
-# only geocode rows missing coordinates from OSM
 missing_rows = df[df["latitude"].isna()].copy()
 
 for i, row in missing_rows.iterrows():
@@ -31,7 +29,7 @@ for i, row in missing_rows.iterrows():
             df.at[i, "longitude"] = None
     except Exception as e:
         print(f"Error on row {i}: {e}")
-    time.sleep(0.25)  # avoid throttling
+    time.sleep(0.25)
 
 df.to_csv("census_villages_geocoded_google.csv", index=False)
 print("Done! Results saved as census_villages_geocoded_google.csv")
