@@ -396,7 +396,7 @@ class AppData:
         with open(geo_path) as f:
             geo = json.load(f)
 
-        # Map administrative districts → DHMTs that fall within them
+        # Map administrative districts to DHMTs that fall within them
         district_to_dhmts = {
             "Central District": ["Boteti", "Mahalapye", "Serowe-Palapye", "Tutume"],
             "Chobe District": ["Chobe"],
