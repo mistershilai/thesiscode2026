@@ -246,7 +246,12 @@ def _save_facilities():
 
 
 def _save_cms():
-    app_data.cms_active.to_csv(CMS_CSV)
+    # write only the core columns so the file round-trips through _load_cms_data;
+    # custom scenario columns are persisted separately under cms_scenarios/
+    core = ["description", "unit_price_bwp", "biweekly_2526", "biweekly_2627"]
+    df = app_data.cms_active[[c for c in core if c in app_data.cms_active.columns]].copy()
+    df.index.name = "product_code"
+    df.to_csv(CMS_CSV)
 
 
 def _save_matrices():

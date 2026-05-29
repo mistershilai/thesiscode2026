@@ -143,8 +143,11 @@ class AppData:
         self.CMS_NAME = CMS_NAME
 
         fac.columns = fac.columns.str.strip()
-        fac = fac.dropna(subset=["Latitude", "Longitude"])
-        fac = fac.rename(columns={"Latitude": "latitude", "Longitude": "longitude"})
+        # tolerate either the raw "Latitude/Longitude" headers or the lowercase
+        # "latitude/longitude" headers written back by _save_facilities
+        latlon_rename = {c: c.lower() for c in fac.columns if c.lower() in ("latitude", "longitude")}
+        fac = fac.rename(columns=latlon_rename)
+        fac = fac.dropna(subset=["latitude", "longitude"])
         fac["Service Delivery Type"] = (
             fac["Service Delivery Type"]
             .astype(str).str.strip().str.replace(r"\s+", " ", regex=True)
@@ -227,20 +230,41 @@ class AppData:
             cms_raw.columns.str.strip().str.lower()
             .str.replace(r"[^a-z0-9]+", "_", regex=True).str.strip("_")
         )
-        amc_cols = [c for c in cms_raw.columns if c.startswith("average_monthly")]
-        cms = cms_raw.rename(columns={
-            "product_code": "product_code",
-            "product_description": "description",
-            "unit_price_bwp": "unit_price_bwp",
-            amc_cols[0]: "amc_2526",
-            amc_cols[1]: "amc_2627",
-        }).copy()
-        for col in ["unit_price_bwp", "amc_2526", "amc_2627"]:
-            cms[col] = pd.to_numeric(cms[col], errors="coerce").fillna(0.0)
-        cms["biweekly_2526"] = cms["amc_2526"] / 2.0
-        cms["biweekly_2627"] = cms["amc_2627"] / 2.0
-        cms_active = cms[(cms["biweekly_2526"] > 0) | (cms["biweekly_2627"] > 0)].copy()
-        cms_active = cms_active.set_index("product_code")
+
+        if any(c.startswith("biweekly_") for c in cms_raw.columns):
+            # already-processed format written by _save_cms (no AMC columns)
+            pc = "product_code" if "product_code" in cms_raw.columns else cms_raw.columns[0]
+            cms = cms_raw.rename(columns={pc: "product_code"}).copy()
+            if "unit_price_bwp" not in cms.columns:
+                cms["unit_price_bwp"] = 0.0
+            if "description" not in cms.columns:
+                cms["description"] = ""
+            # keep only the built-in biweekly columns; custom scenarios load separately
+            for sid in ("2526", "2627"):
+                col = f"biweekly_{sid}"
+                if col not in cms.columns:
+                    cms[col] = 0.0
+            drop = [c for c in cms.columns
+                    if c.startswith("biweekly_") and c not in ("biweekly_2526", "biweekly_2627")]
+            cms = cms.drop(columns=drop)
+            for col in ["unit_price_bwp", "biweekly_2526", "biweekly_2627"]:
+                cms[col] = pd.to_numeric(cms[col], errors="coerce").fillna(0.0)
+            cms_active = cms.set_index("product_code")
+        else:
+            # raw CMS export with Average Monthly Consumption columns
+            amc_cols = [c for c in cms_raw.columns if c.startswith("average_monthly")]
+            cms = cms_raw.rename(columns={
+                "product_description": "description",
+                amc_cols[0]: "amc_2526",
+                amc_cols[1]: "amc_2627",
+            }).copy()
+            for col in ["unit_price_bwp", "amc_2526", "amc_2627"]:
+                cms[col] = pd.to_numeric(cms[col], errors="coerce").fillna(0.0)
+            cms["biweekly_2526"] = cms["amc_2526"] / 2.0
+            cms["biweekly_2627"] = cms["amc_2627"] / 2.0
+            cms_active = cms[(cms["biweekly_2526"] > 0) | (cms["biweekly_2627"] > 0)].copy()
+            cms_active = cms_active.set_index("product_code")
+
         self.cms_active = cms_active
         self.cms_proc_cost = cms_active["unit_price_bwp"]
 
