@@ -10,6 +10,7 @@ kaelo_users.db
 
 # Backups
 *.ipynb.backup.*
+*.bak
 
 # Python / build
 __pycache__/
