@@ -199,7 +199,7 @@ def build_region_instance(target_dhmt: str) -> dict:
         raise ValueError(f"No arcs for DHMT = {target_dhmt}")
     model_arcs = [(r.u, r.v) for r in arcs_df.itertuples(index=False)]
 
-    # ── Population / demand pipeline ──────────────────────────────────────
+    # Population / demand pipeline
     hosp_df = d.results_with_dhmt["Hospital"].copy()
     clinic_df = d.results_with_dhmt["Clinic"].copy()
     hp_df = d.results_with_dhmt["Health Post"].copy()
@@ -491,7 +491,7 @@ def run_simulation(
         ]
 
     elif strategy == "adr":
-        # ── Affine Decision Rules: ship[a] = F[a] + alpha[a] * (d - mu) ──
+        # Affine Decision Rules: ship[a] = F[a] + alpha[a] * (d - mu)
         arc_df = instance.get("arc_df")
         if arc_df is None:
             raise ValueError("arc_df required for ADR strategy")

@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from scipy.spatial import cKDTree
 
-# ── Paths ────────────────────────────────────────────────────────────────────
+# Paths 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent  # thesiscode2026/
 PIPELINE_DIR = BASE_DIR / "national_pipeline"
 
@@ -103,7 +103,7 @@ class AppData:
         self._compute_pop_shares()
         self.loaded = True
 
-    # ── Population ────────────────────────────────────────────────────────
+    # Population
     def _load_population(self):
         pop = pd.read_csv(
             BASE_DIR / "botswana_geocode/census_population_2022_geocoded_final_uniform.csv"
@@ -119,7 +119,7 @@ class AppData:
         pop = pop.dropna(subset=["latitude", "longitude"]).copy()
         self.pop = pop
 
-    # ── Facilities ────────────────────────────────────────────────────────
+    # Facilities
     def _load_facilities(self):
         fac = pd.read_csv(BASE_DIR / "facilities_with_warehouses.csv")
         fac["DHMT_norm"] = fac["DHMT"].astype(str).str.strip()
@@ -144,7 +144,7 @@ class AppData:
         self.fac = fac
         self.dhmt_list = sorted(fac["DHMT"].dropna().astype(str).str.strip().unique().tolist())
 
-    # ── Distance / time matrices ──────────────────────────────────────────
+    # Distance / time matrices
     def _load_matrices(self):
         self.dist_matrix_df = _clean_matrix(
             pd.read_csv(BASE_DIR / "distance_matrix_named.csv", index_col=0)
@@ -153,7 +153,7 @@ class AppData:
             pd.read_csv(BASE_DIR / "duration_matrix_named.csv", index_col=0)
         )
 
-    # ── Age breakdown ─────────────────────────────────────────────────────
+    # Age breakdown
     def _load_age_data(self):
         age_df = pd.read_csv(BASE_DIR / "census_datacleaning/botswana_population_age_breakdown.csv")
         age_df["AgeGroup"] = (
@@ -181,7 +181,7 @@ class AppData:
         )
         self.district_adm = district_adm
 
-    # ── GLM artifacts ─────────────────────────────────────────────────────
+    # GLM artifacts
     def _load_glm_artifacts(self):
         ART_DIR = BASE_DIR / "antimicrobialglm/artifacts"
         self.p_class = pd.read_csv(ART_DIR / "p_class.csv")
@@ -211,7 +211,7 @@ class AppData:
         pi["agegroup"] = pi["agegroup"].replace(self.age_map)
         self.pi_inf_given_a = pi
 
-    # ── CMS data ──────────────────────────────────────────────────────────
+    # CMS data
     def _load_cms_data(self):
         cms_raw = pd.read_csv(PIPELINE_DIR / "antimicrobials.csv")
         cms_raw.columns = (
@@ -235,7 +235,7 @@ class AppData:
         self.cms_active = cms_active
         self.cms_proc_cost = cms_active["unit_price_bwp"]
 
-    # ── Facility assignments ──────────────────────────────────────────────
+    # Facility assignments
     def _compute_facility_assignments(self):
         _pop = self.pop.copy()
         _pop["total_population"] = pd.to_numeric(
@@ -255,7 +255,7 @@ class AppData:
             )
         self._raw_results = raw_results
 
-    # ── National population share per facility ────────────────────────────
+    # National population share per facility
     def _compute_pop_shares(self):
         _rename = {
             "Facility Name_1": "facility_name",
@@ -282,7 +282,7 @@ class AppData:
         self.pop_fac_share = (pop_fac_national / national_pop).rename("pop_share")
         self.national_pop = national_pop
 
-    # ── Public accessors ──────────────────────────────────────────────────
+    # Public accessors
     def get_facilities_for_region(self, dhmt: str) -> pd.DataFrame:
         """Return facilities belonging to the given DHMT."""
         fac = self.fac.copy()

@@ -136,7 +136,7 @@ def remove_cms_product(body: dict):
 
 OSRM_URL = os.environ.get("OSRM_URL", "http://localhost:5001")
 
-# ── Persist helpers ──────────────────────────────────────────────────────
+# Persist helpers
 
 FAC_CSV = BASE_DIR / "facilities_with_warehouses.csv"
 CMS_CSV = PIPELINE_DIR / "antimicrobials.csv"
@@ -340,7 +340,7 @@ def remove_facility(body: dict):
     fac_type = str(match.iloc[0].get("Service Delivery Type", "")).strip()
     dhmt = str(match.iloc[0].get("DHMT", "")).strip()
 
-    # ── Warehouses: never remove ──
+    # Warehouses: never remove
     warehouse_types = {"Warehouse"}
     if fac_type in warehouse_types or bool(match.iloc[0].get("Is_Warehouse", False)):
         raise HTTPException(
@@ -349,7 +349,7 @@ def remove_facility(body: dict):
             "Every region requires a warehouse as its supply source."
         )
 
-    # ── Hospitals: require replacement ──
+    # Hospitals: require replacement
     hospital_types = {"Primary Hospital", "District Hospital", "Referral Hospital"}
     if fac_type in hospital_types:
         replacement = body.get("replacement_hospital", "").strip()
@@ -382,7 +382,7 @@ def remove_facility(body: dict):
         if repl_type not in hospital_types:
             raise HTTPException(400, f"'{replacement}' is a {repl_type}, not a hospital")
 
-    # ── Remove facility ──
+    # Remove facility
     app_data.fac = fac[fac["Facility Name"].astype(str).str.strip() != name].reset_index(drop=True)
 
     # Remove from distance/time matrices
@@ -790,7 +790,7 @@ def export_plan(body: dict):
     thin = Side(border_style="thin", color="CCCCCC")
     border = Border(left=thin, right=thin, top=thin, bottom=thin)
 
-    # ── Summary sheet ──────────────────────────────────────────────
+    # Summary sheet
     ws = wb.active
     ws.title = "Summary"
     ws["A1"] = f"Shipment Plan - {region}"
@@ -823,7 +823,7 @@ def export_plan(body: dict):
     ws.column_dimensions["A"].width = 36
     ws.column_dimensions["B"].width = 20
 
-    # ── Shipments sheet ────────────────────────────────────────────
+    # Shipments sheet
     ship_ws = wb.create_sheet("Shipments")
     ship_headers = ["From", "To", "Drug", "Quantity", "Distance (km)"]
     for j, h in enumerate(ship_headers, start=1):
@@ -844,7 +844,7 @@ def export_plan(body: dict):
     ship_ws.freeze_panes = "A2"
     ship_ws.auto_filter.ref = ship_ws.dimensions
 
-    # ── Procurement sheet ──────────────────────────────────────────
+    # Procurement sheet
     proc_ws = wb.create_sheet("Procurement")
     proc_headers = ["Drug", "Quantity", "Unit Cost (BWP)", "Total Cost (BWP)"]
     for j, h in enumerate(proc_headers, start=1):
