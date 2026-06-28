@@ -1,0 +1,49 @@
+
+.env
+app/frontend/.env.*
+
+# Claude Code config
+.claude/
+
+# User / auth data
+kaelo_users.db
+
+docs/methodology_separation.md
+
+# Backups
+*.ipynb.backup.*
+*.bak
+
+# OSRM data (regenerated on deploy from the botswana-latest.osm.pbf download)
+osrm_project/botswana-latest.*
+
+# Spreadsheet exports not read by code
+*.numbers
+
+# Intermediate data not read by code
+national_pipeline/cms_results_partial.parquet
+national_pipeline/gaborone_facilities_filtered.csv
+national_pipeline/greater_gaborone_facilities_filtered.csv
+national_pipeline/greater_gaborone_population_nearest_facilities.csv
+national_pipeline/greater_gaborone_population_nearest_facilities_osrm.csv
+priorityantimicrobialsbotswana.csv
+
+# Python / build
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.tmp
+.DS_Store
+checkpoint.csv
+checkpoints/
+.venv/
+venv/
+env/
+conda/
+.conda/
+conda_env/
+
+# SPSS microdata (too large for GitHub; keep locally)
+*.sav
