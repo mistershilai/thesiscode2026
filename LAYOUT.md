@@ -7,7 +7,7 @@ Target structure for the MSOM submission. The migration is being done in
 thesiscode2026/
 ├── README.md  RUNNING.md  LAYOUT.md  requirements.txt
 ├── data/
-│   ├── raw/          # 🔒 private inputs (.sav, geocoded, PPS) — gitignored, kept local
+│   ├── raw/          # [PRIVATE] inputs (.sav, geocoded, PPS) — gitignored, kept local
 │   ├── processed/    # matrices, facilities, deduped census, geocoded population
 │   └── reference/    # antimicrobials, district estimates, priority lists
 ├── pipeline/
