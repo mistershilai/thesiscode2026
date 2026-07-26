@@ -51,3 +51,6 @@ conda_env/
 # Raw Point Prevalence Survey data (private Botswana MoH data; keep locally, never publish)
 PPS*Raw.xlsx
 PPS -BW Consolidated Raw.xlsx
+
+# PPS-derived model artifacts (regenerate locally via antimicrobialglm/muria_estimator.py; private)
+antimicrobialglm/artifacts/
