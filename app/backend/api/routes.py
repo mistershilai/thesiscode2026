@@ -235,7 +235,7 @@ OSRM_URL = os.environ.get("OSRM_URL", "http://localhost:5001")
 
 # Persist helpers
 
-FAC_CSV = BASE_DIR / "facilities_with_warehouses.csv"
+FAC_CSV = BASE_DIR / "data/processed/facilities_with_warehouses.csv"
 CMS_CSV = PIPELINE_DIR / "antimicrobials.csv"
 DIST_CSV = BASE_DIR / "data/processed/distance_matrix_named.csv"
 DUR_CSV = BASE_DIR / "data/processed/duration_matrix_named.csv"

@@ -130,7 +130,7 @@ class AppData:
 
     # Facilities
     def _load_facilities(self):
-        fac = pd.read_csv(BASE_DIR / "facilities_with_warehouses.csv")
+        fac = pd.read_csv(BASE_DIR / "data/processed/facilities_with_warehouses.csv")
         fac["DHMT_norm"] = fac["DHMT"].astype(str).str.strip()
         fac["Facility_norm"] = fac["Facility Name"].astype(str).str.strip()
         ware = fac[fac["Is_Warehouse"] == True].copy()

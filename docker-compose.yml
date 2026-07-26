@@ -24,7 +24,7 @@ services:
       - CORS_ORIGINS=*
     volumes:
       # Persist data changes (drugs, facilities, matrices)
-      - ./facilities_with_warehouses.csv:/data/facilities_with_warehouses.csv
+      - ./data/processed/facilities_with_warehouses.csv:/data/facilities_with_warehouses.csv
       - ./data/processed/distance_matrix_named.csv:/data/distance_matrix_named.csv
       - ./data/processed/duration_matrix_named.csv:/data/duration_matrix_named.csv
       - ./national_pipeline/antimicrobials.csv:/data/national_pipeline/antimicrobials.csv

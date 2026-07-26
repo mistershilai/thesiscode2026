@@ -67,7 +67,7 @@ def load_data():
     pop = pop.dropna(subset=["latitude", "longitude"]).copy()
 
     # Facilities
-    fac = pd.read_csv(DATA_DIR / "facilities_with_warehouses.csv")
+    fac = pd.read_csv(DATA_DIR / "data/processed/facilities_with_warehouses.csv")
     fac["DHMT_norm"]     = fac["DHMT"].astype(str).str.strip()
     fac["Facility_norm"] = fac["Facility Name"].astype(str).str.strip()
     ware = fac[fac["Is_Warehouse"] == True].copy()
