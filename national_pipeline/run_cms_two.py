@@ -77,8 +77,9 @@ def load_data():
     DHMT_SOURCE_MAP = {dhmt: DHMT_WAREHOUSE_MAP.get(dhmt, CMS_NAME) for dhmt in all_dhmts}
 
     fac.columns = fac.columns.str.strip()
-    fac = fac.dropna(subset=["Latitude", "Longitude"])
+    # tolerate either "Latitude/Longitude" or already-lowercase "latitude/longitude"
     fac = fac.rename(columns={"Latitude": "latitude", "Longitude": "longitude"})
+    fac = fac.dropna(subset=["latitude", "longitude"])
     fac["Service Delivery Type"] = fac["Service Delivery Type"].astype(str).str.strip().str.replace(r"\s+", " ", regex=True)
     fac = fac[~fac["Facility Name"].str.contains("prison|school", case=False, na=False)]
 
