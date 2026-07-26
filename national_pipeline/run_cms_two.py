@@ -84,8 +84,8 @@ def load_data():
     fac = fac[~fac["Facility Name"].str.contains("prison|school", case=False, na=False)]
 
     # Distance / time matrices
-    dist_matrix_df = pd.read_csv(DATA_DIR / "distance_matrix_named.csv", index_col=0)
-    time_matrix_df = pd.read_csv(DATA_DIR / "duration_matrix_named.csv",     index_col=0)
+    dist_matrix_df = pd.read_csv(DATA_DIR / "data/processed/distance_matrix_named.csv", index_col=0)
+    time_matrix_df = pd.read_csv(DATA_DIR / "data/processed/duration_matrix_named.csv", index_col=0)
     dist_matrix_df = _clean_matrix(dist_matrix_df)
     time_matrix_df = _clean_matrix(time_matrix_df)
 

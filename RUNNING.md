@@ -76,11 +76,11 @@ Then start the server (`docker compose up osrm` from the repo root, exposed on p
 Query the matrices — Notebook: `osrm_project/combined_workflow.ipynb` `[SLOW]` (many OSRM table queries)
 
 - Reads: `facilities_with_warehouses.csv`, running OSRM server
-- Writes: `distance_matrix_named.csv`, `duration_matrix_named.csv` (repo root — canonical, consumed downstream), `facility_id_lookup.csv`, plus `osrm_project/*_labeled.csv` and `matrix_summary.csv` (internal QA)
+- Writes: `data/processed/{distance_matrix_named,duration_matrix_named}.csv` (canonical, consumed downstream), `facility_id_lookup.csv`, plus `osrm_project/*_labeled.csv` and `matrix_summary.csv` (internal QA)
 
-Note: the canonical matrices consumed by every downstream stage are the repo-root
-copies. The `osrm_project/` copies of the plain/named matrices are QA exports read
-by nothing downstream — do not point later stages at them.
+Note: the canonical matrices consumed by every downstream stage are the
+`data/processed/` copies. The `osrm_project/` copies of the plain/named matrices
+are QA exports read by nothing downstream — do not point later stages at them.
 
 ---
 
@@ -106,7 +106,7 @@ the simulations treat kappa as a swept sensitivity parameter, not a pinned value
 
 Notebook: `national_pipeline/national_pipeline.ipynb`
 
-- Reads: canonical population, `facilities_with_warehouses.csv`, root `distance_matrix_named.csv` / `duration_matrix_named.csv`, `botswana_population_age_breakdown.csv`, `district_admissions_estimates_2021.csv`, `antimicrobialglm/artifacts/*`, `national_pipeline/{antimicrobials.csv,botswana.geojson}`
+- Reads: canonical population, `facilities_with_warehouses.csv`, `data/processed/{distance_matrix_named,duration_matrix_named}.csv`, `botswana_population_age_breakdown.csv`, `district_admissions_estimates_2021.csv`, `antimicrobialglm/artifacts/*`, `national_pipeline/{antimicrobials.csv,botswana.geojson}`
 - Writes: `{region}_population_nearest_facilities*.csv`, `cms_results.parquet`, figures/maps
 
 Runs nearest-facility assignment, multi-echelon network construction, node-level
@@ -154,7 +154,7 @@ Auth uses a local SQLite DB (`kaelo_users.db`, gitignored). Set `JWT_SECRET` and
 ```
 .sav -> [1] census cleaning -> deduped.csv -> [2] geocode [PAID] -> final_uniform.csv --+
                                                                                         |
-facilities_with_warehouses.csv -> [3] OSRM [SLOW] -> distance/duration_matrix_named.csv-+
+facilities_with_warehouses.csv -> [3] OSRM [SLOW] -> data/processed/*_matrix_named.csv--+
                                                                                         +-> [5] national_pipeline [SLOW] -> cms_results.parquet, figures
 MURIA PPS + paper tables -> [4] demand estimator -> artifacts/*.csv --------------------+                                   |
                                                                                                                             +-> [6] app (recomputes live)

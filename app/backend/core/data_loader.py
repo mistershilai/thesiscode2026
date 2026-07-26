@@ -159,10 +159,10 @@ class AppData:
     # Distance / time matrices
     def _load_matrices(self):
         self.dist_matrix_df = _clean_matrix(
-            pd.read_csv(BASE_DIR / "distance_matrix_named.csv", index_col=0)
+            pd.read_csv(BASE_DIR / "data/processed/distance_matrix_named.csv", index_col=0)
         )
         self.time_matrix_df = _clean_matrix(
-            pd.read_csv(BASE_DIR / "duration_matrix_named.csv", index_col=0)
+            pd.read_csv(BASE_DIR / "data/processed/duration_matrix_named.csv", index_col=0)
         )
 
     # Age breakdown
