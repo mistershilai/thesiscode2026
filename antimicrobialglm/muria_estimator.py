@@ -336,10 +336,22 @@ def export_artifacts(joint_fit, res, alpha, kappa, marg, rare):
     OUT_DIR.mkdir(exist_ok=True)
     keys = ["agegroup", "infectionstatus", "hospital_type", "Class"]
 
-    j = joint_fit.groupby(keys, as_index=False).agg(count=("count", "sum"), mu_hat=("mu_hat", "sum"))
-    # p(Class | age, infection, hospital_type)
+    agg = joint_fit.groupby(keys, as_index=False).agg(count=("count", "sum"), mu_hat=("mu_hat", "sum"))
+    # p(Class | age, infection, hospital_type) over the FULL grid, so downstream
+    # never hits a missing (age, infection, tier) combo. Zero-mass groups fall
+    # back to the baseline p0(Class | tier); a fully empty tier to uniform.
+    j = pd.MultiIndex.from_product([AGE_ORDER, INF_CATS, TIERS, CLASSES], names=keys).to_frame(index=False)
+    j = j.merge(agg, on=keys, how="left")
+    j[["count", "mu_hat"]] = j[["count", "mu_hat"]].fillna(0.0)
     denom = j.groupby(["agegroup", "infectionstatus", "hospital_type"])["count"].transform("sum")
-    j["p_class"] = np.where(denom > 0, j["count"] / denom, 0.0)
+    j["p_class"] = np.where(denom > 0, j["count"] / denom, np.nan)
+    p0 = marg["hi"].rename(columns={"tier": "hospital_type", "drug_class": "Class"}).copy()
+    p0["p0"] = p0["count"] / p0.groupby("hospital_type")["count"].transform("sum")
+    j = j.merge(p0[["hospital_type", "Class", "p0"]], on=["hospital_type", "Class"], how="left")
+    j["p_class"] = j["p_class"].fillna(j["p0"]).fillna(1.0 / len(CLASSES))
+    # renormalize each (age, infection, tier) group to a proper distribution
+    grp = ["agegroup", "infectionstatus", "hospital_type"]
+    j["p_class"] = j["p_class"] / j.groupby(grp)["p_class"].transform("sum")
     j[keys + ["p_class"]].to_csv(OUT_DIR / "p_class.csv", index=False)
 
     # m_ak: patients, prescriptions, intensity per (age, infection)
