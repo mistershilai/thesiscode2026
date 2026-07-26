@@ -295,6 +295,9 @@ def fit_nb2(joint: pd.DataFrame, marg: dict):
     terms = "C(agegroup) + C(infectionstatus) + C(hospital_type) + C(Class_model)"
     res = smf.negativebinomial(f"count_int ~ {terms}", data=fit,
                                offset=fit["log_exposure"]).fit(method="nm", maxiter=5000, disp=False)
+    # NOTE: kappa here is a byproduct of fitting NB to the synthetic joint, NOT the
+    # demand overdispersion. The simulation does not use it (it sweeps kappa). Real
+    # per-patient overdispersion from MURIA is approx kappa=3.7 (method of moments).
     alpha = float(res.params.get("alpha", 0.0))
     kappa = np.inf if alpha <= 1e-6 else 1.0 / alpha
     df["mu_hat"] = res.predict(df)
@@ -363,7 +366,13 @@ def export_artifacts(joint_fit, res, alpha, kappa, marg, rare):
             "infection_levels": INF_CATS, "used_hiv": USE_HIV, "rare_classes_pooled": rare,
             "alpha_hat": alpha, "kappa_hat": None if np.isinf(kappa) else kappa,
             "source": "MURIA PPS (private); calibrated synthetic microdata per Report 4.5",
-            "nb2_variance": "Var = mu + alpha*mu^2 = mu + mu^2/kappa"}
+            "nb2_variance": "Var = mu + alpha*mu^2 = mu + mu^2/kappa",
+            "kappa_note": ("kappa_hat is a BYPRODUCT of fitting NB to the smooth synthetic "
+                           "joint and is NOT the demand overdispersion; the simulation does "
+                           "not use it. Simulations sweep kappa (e.g. [2, 10, 25]). The "
+                           "empirical per-patient overdispersion from MURIA counts is "
+                           "approx kappa=3.7 (method of moments, Sec-1 self-report), which "
+                           "the swept range brackets.")}
     (OUT_DIR / "metadata.json").write_text(json.dumps(meta, indent=2))
 
 
