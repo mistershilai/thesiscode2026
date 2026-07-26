@@ -47,3 +47,7 @@ conda_env/
 
 # SPSS microdata (too large for GitHub; keep locally)
 *.sav
+
+# Raw Point Prevalence Survey data (private Botswana MoH data; keep locally, never publish)
+PPS*Raw.xlsx
+PPS -BW Consolidated Raw.xlsx
