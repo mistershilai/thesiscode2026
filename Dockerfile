@@ -25,29 +25,28 @@ COPY app/backend/ /app/app/backend/
 # Copy built frontend into backend's expected location
 COPY --from=frontend-build /build/dist /app/app/frontend/dist
 
-# Copy data files the backend needs
-COPY facilities_with_warehouses.csv /data/facilities_with_warehouses.csv
-COPY distance_matrix_named.csv /data/distance_matrix_named.csv
-COPY duration_matrix_named.csv /data/duration_matrix_named.csv
-COPY national_pipeline/antimicrobials.csv /data/national_pipeline/antimicrobials.csv
-COPY national_pipeline/botswana.geojson /data/national_pipeline/botswana.geojson
-COPY national_pipeline/botswana_age_distribution.csv /data/national_pipeline/botswana_age_distribution.csv
-COPY national_pipeline/district_admissions.csv /data/national_pipeline/district_admissions.csv
-COPY national_pipeline/glm_*.csv /data/national_pipeline/
-COPY botswana_geocode/census_population_2022_geocoded_final_uniform.csv /data/botswana_geocode/census_population_2022_geocoded_final_uniform.csv
+# Copy data files the backend needs. Destinations match data_loader's BASE_DIR
+# reads (BASE_DIR resolves to /app in the container).
+# NOTE: antimicrobialglm/artifacts/* and the geocoded population are
+# gitignored/private — regenerate/supply them locally before building.
+COPY data/processed/facilities_with_warehouses.csv /app/data/processed/facilities_with_warehouses.csv
+COPY data/processed/distance_matrix_named.csv /app/data/processed/distance_matrix_named.csv
+COPY data/processed/duration_matrix_named.csv /app/data/processed/duration_matrix_named.csv
+COPY data/reference/district_admissions_estimates_2021.csv /app/data/reference/district_admissions_estimates_2021.csv
+COPY census_datacleaning/botswana_population_age_breakdown.csv /app/census_datacleaning/botswana_population_age_breakdown.csv
+COPY botswana_geocode/census_population_2022_geocoded_final_uniform.csv /app/botswana_geocode/census_population_2022_geocoded_final_uniform.csv
+COPY antimicrobialglm/artifacts/ /app/antimicrobialglm/artifacts/
+COPY national_pipeline/antimicrobials.csv /app/national_pipeline/antimicrobials.csv
+COPY national_pipeline/botswana.geojson /app/national_pipeline/botswana.geojson
+COPY national_pipeline/cms_scenarios/ /app/national_pipeline/cms_scenarios/
 
 # Set env vars
 ENV PYTHONUNBUFFERED=1
 ENV CORS_ORIGINS=*
 ENV OSRM_URL=http://osrm:5000
 
-# The data_loader uses BASE_DIR relative to the source file.
-# We need to symlink /data contents so the path resolution works.
-RUN ln -sf /data/facilities_with_warehouses.csv /app/facilities_with_warehouses.csv && \
-    ln -sf /data/distance_matrix_named.csv /app/distance_matrix_named.csv && \
-    ln -sf /data/duration_matrix_named.csv /app/duration_matrix_named.csv && \
-    ln -sf /data/national_pipeline /app/national_pipeline && \
-    ln -sf /data/botswana_geocode /app/botswana_geocode
+# Data files are copied directly to their BASE_DIR-relative /app paths above;
+# no symlink indirection needed.
 
 EXPOSE 8000
 
