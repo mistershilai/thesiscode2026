@@ -179,7 +179,7 @@ class AppData:
         age_df["district_key"] = age_df["district"].astype(str).str.strip().str.lower()
         self.age_df = age_df
 
-        district_adm = pd.read_csv(BASE_DIR / "district_admissions_estimates_2021.csv")
+        district_adm = pd.read_csv(BASE_DIR / "data/reference/district_admissions_estimates_2021.csv")
         district_adm = district_adm.rename(columns={
             "Health District": "district",
             "Estimated Admissions 2021": "annual_admissions_est",

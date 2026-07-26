@@ -26,7 +26,7 @@ national_pipeline/gaborone_facilities_filtered.csv
 national_pipeline/greater_gaborone_facilities_filtered.csv
 national_pipeline/greater_gaborone_population_nearest_facilities.csv
 national_pipeline/greater_gaborone_population_nearest_facilities_osrm.csv
-priorityantimicrobialsbotswana.csv
+data/reference/priorityantimicrobialsbotswana.csv
 
 # Python / build
 __pycache__/

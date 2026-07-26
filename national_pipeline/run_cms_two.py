@@ -98,7 +98,7 @@ def load_data():
     age_df["district_key"] = age_df["district"].astype(str).str.strip().str.lower()
 
     # District admissions
-    district_adm = pd.read_csv(DATA_DIR / "district_admissions_estimates_2021.csv")
+    district_adm = pd.read_csv(DATA_DIR / "data/reference/district_admissions_estimates_2021.csv")
     district_adm = district_adm.rename(columns={
         "Health District": "district",
         "Estimated Admissions 2021": "annual_admissions_est"
