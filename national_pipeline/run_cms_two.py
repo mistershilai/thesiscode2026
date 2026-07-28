@@ -35,6 +35,7 @@ OUT_DIR.mkdir(exist_ok=True)
 # Keep peak memory ≤ 32 GB.  Each ARO-ADR solve can spike several GB.
 # Start at 4; tune up after checking `seff <jobid>`.
 MAX_WORKERS = 3
+SOLVER = cp.HIGHS   # HiGHS (open-source LP solver); MOSEK breaks on this problem
 
 # Solver settings
 os.environ["OMP_NUM_THREADS"]  = "1"   # prevent MOSEK from grabbing all cores
@@ -1119,7 +1120,7 @@ def run_region(region):
                            holding_cost_per_unit=0.1, procurement_cost_per_unit=inst_y1["proc_cost"],
                            supply_multiplier=0.0, arc_cap=inst_y1["arc_cap"],
                            storage_cap_per_node=inst_y1["storage_cap_per_node"],
-                           solver=cp.MOSEK, verbose=False, relax_integrality=True, I0_start=None)
+                           solver=SOLVER, verbose=False, relax_integrality=True, I0_start=None)
 
         m_det_y1, _, final_I_det = simulate_policy_under_draws_cms(**shared_y1)
         m_rob_y1, _, final_I_rob = simulate_static_robust_under_draws_cms(**shared_y1, sigma_mat=inst_y1["sigma_mat"], Gamma=Gamma)
@@ -1140,7 +1141,7 @@ def run_region(region):
                            holding_cost_per_unit=0.1, procurement_cost_per_unit=inst_y2["proc_cost"],
                            supply_multiplier=0.0, arc_cap=inst_y2["arc_cap"],
                            storage_cap_per_node=inst_y2["storage_cap_per_node"],
-                           solver=cp.MOSEK, verbose=False, relax_integrality=True)
+                           solver=SOLVER, verbose=False, relax_integrality=True)
 
         m_det_y2, _, _ = simulate_policy_under_draws_cms(**shared_y2,         I0_start=final_I_det)
         m_rob_y2, _, _ = simulate_static_robust_under_draws_cms(**shared_y2,  sigma_mat=inst_y2["sigma_mat"],

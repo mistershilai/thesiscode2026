@@ -54,3 +54,6 @@ PPS -BW Consolidated Raw.xlsx
 
 # PPS-derived model artifacts (regenerate locally via antimicrobialglm/muria_estimator.py; private)
 antimicrobialglm/artifacts/
+
+# AWS payload for the missing-regions run (contains PRIVATE data — never commit)
+national_pipeline/aws/payload.tar.gz
