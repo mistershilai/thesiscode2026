@@ -1104,9 +1104,10 @@ def simulate_aro_adr_under_draws_cms(
 
 # Region worker (runs in a subprocess)
 
-def run_region(region):
-    """Run both years for one region. Returns (list_of_metric_dicts, error_str_or_None)."""
-    T = 26; kappa = 10.0; seed = 42; Gamma = 10.0
+def run_region(region, T=26):
+    """Run both years for one region. Returns (list_of_metric_dicts, error_str_or_None).
+    T is the number of biweekly periods (26 = full year; use a small T for a smoke test)."""
+    kappa = 10.0; seed = 42; Gamma = 10.0
     results = []
     try:
         # Year 1: 2025-26

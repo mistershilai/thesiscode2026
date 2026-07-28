@@ -17,15 +17,20 @@ inbound SSH (port 22) from your IP.
 bash national_pipeline/aws/make_payload.sh   # -> national_pipeline/aws/payload.tar.gz (gitignored)
 ```
 
-## 2. Launch a compute-optimized spot instance (encrypted EBS)
+## 2. Launch a MEMORY-optimized spot instance (encrypted EBS)
 
-Adjust REGION, KEY, SG, and the AMI (a current Ubuntu 22.04 x86_64 AMI). 8 regions
-fit comfortably on ~8-16 vCPU; c7i.4xlarge (16 vCPU) is a good default.
+This job is memory-bound: each region's adjustable-robust model peaks around
+~10-15 GB, so 7 regions in parallel need ~80-100 GB. Use a memory-optimized
+instance. r7i.4xlarge (16 vCPU, 128 GB) comfortably runs all 7 at once; step down
+to r7i.2xlarge (8 vCPU, 64 GB) if you run ~4 at a time. Do NOT use a compute
+instance like c7i.4xlarge (only 32 GB) — it will OOM, exactly like the cluster did.
+
+Adjust REGION, KEY, SG, and the AMI (a current Ubuntu 22.04 x86_64 AMI).
 
 ```bash
 aws ec2 run-instances \
   --image-id <ubuntu-22.04-ami-id> \
-  --instance-type c7i.4xlarge \
+  --instance-type r7i.4xlarge \
   --instance-market-options MarketType=spot \
   --key-name <your-key> \
   --security-group-ids <sg-id> \
