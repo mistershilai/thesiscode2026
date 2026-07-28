@@ -1,86 +1,81 @@
 # Designing Robust Antimicrobial Supply Chains in Botswana
 
-**Author:** Elliot S. Lee  
-**Advised by:** Professor Bartolomeo Stellato  
+**Author:** Elliot S. Lee
+**Advised by:** Professor Bartolomeo Stellato
 **Department of Operations Research & Financial Engineering, Princeton University**
 
 ---
 
 ## Overview
 
-This repository contains the code, data-processing pipelines, and optimization models for:
-**”Designing Robust Antimicrobial Supply Chains under Epidemiological Demand Uncertainty in Botswana.”**
+Code, data-processing pipelines, and optimization models for *"Designing Robust
+Antimicrobial Supply Chains under Epidemiological Demand Uncertainty in Botswana."*
+The pipeline runs from raw census and facility data through geocoding,
+road-network distance-matrix construction, antimicrobial demand modeling, and
+multi-echelon robust/adjustable-robust optimization with SEIR epidemic coupling.
 
-The pipeline goes from raw census/facility data through geocoding, distance-matrix construction, demand modeling, and multi-echelon robust optimization with epidemic coupling.
+For the end-to-end run order (commands, inputs/outputs, slow/paid steps) see
+[`RUNNING.md`](RUNNING.md). For the folder structure see [`LAYOUT.md`](LAYOUT.md).
+For orientation and conventions see [`CLAUDE.md`](CLAUDE.md).
 
 ---
 
 ## Repository layout
 
-### Data preparation
+```
+data/            inputs: raw/ (private, gitignored), processed/ (matrices,
+                 facilities, geocoded population), reference/ (drug lists, estimates)
+census_datacleaning/   clean 2022 census microdata -> district age breakdowns
+botswana_geocode/      geocode settlements via Google Maps (paid API)
+osrm_project/          local OSRM routing server -> distance/duration matrices
+antimicrobialglm/      MURIA-calibrated antimicrobial demand estimator
+national_pipeline/     multi-echelon optimization + CMS simulation + SEIR coupling
+outputs/         figures/ (all generated PNGs, HTML maps) and results/ (parquet)
+app/             FastAPI + React viz app (for the Botswana government)
+deploy/          Oracle Cloud / Docker deployment for the app + OSRM
+legacy/          archived earlier experiments (not part of the pipeline)
+```
 
-- `census_datacleaning/` - deduplicate and clean raw 2022 Botswana census microdata, produce `census_population_2022_deduped.csv` and district-level age breakdowns
-  - `censusdatacleaning.ipynb`
-- `botswana_geocode/` - geocode census settlements via Google Maps API, resolve coordinate mismatches
-  - `geocode_google.py` - batch geocoding script
-  - `geocodedupdated_google.ipynb` - refinement and QA of geocoded coordinates
-  - `fixinggeocode.ipynb` - targeted fixes for problem settlements
-- `osrm_project/` - build and query a local OSRM routing server on Botswana road data, produce distance and duration matrices
-  - `combined_workflow.ipynb` - end-to-end pipeline: facility checks, OSRM table API queries, matrix pivoting, labeling, upper-bound correction, and analysis/visualization
-
-### Demand modeling
-
-- `antimicrobialglm/` - fit a negative binomial GLM for antimicrobial prescription counts by age group, infection status, hospital type, and drug class
-  - `updatedantimicrobialglm.ipynb` - loads admission/infection and antibiotic class tables, constructs synthetic joint counts via IPF, fits NB2 regression, exports calibrated parameters and conditional probabilities to `artifacts/`
-  - `artifacts/` - exported CSVs and metadata (coefficients, fitted means, p(class|stratum), NB parameters)
-
-### Optimization and simulation
-
-- `national_pipeline/` - the main multi-echelon supply chain model
-  - `national_pipeline.ipynb` - nearest-facility assignment, OSRM routing, node-level demand construction, robust/nominal/greedy optimization, CMS-based demand simulation (2025-26 and 2026-27), SEIR epidemic coupling, resistance emergence analysis, and national-level choropleths/visualizations
-  - `run_cms_two.py` - batch script for CMS simulation runs
-  - `results/` - simulation output (parquet files, figures)
-- `nearest_facility.ipynb` - standalone nearest-facility assignment using the facility and population data
-- `app/` - web application (frontend + backend) for interactive visualization (temporarily withheld while app is developed and all private data is removed. app is only to be used by the Botswana government)
-  - `start.sh` - launch script
-
-### Supporting files
-
-- `scripts/` - utility scripts (`check_duplicates.py`, geocode runners, strategy comparisons)
-- `distance_matrix.csv`, `duration_matrix.csv` - precomputed national routing matrices
-- `facilities_with_warehouses.csv` - master facility list with warehouse assignments
-- `priorityantimicrobialsbotswana.csv` - priority antimicrobial drug list
-- `district_admissions_estimates_2021.csv`, `district_facility_distribution_2021.csv` - district-level inputs
-- `Dockerfile`, `docker-compose.yml` - containerized OSRM server setup
-- `requirements.txt` - Python dependencies
-- `docs/` - methodology notes and report drafts
+Key modules:
+- `antimicrobialglm/muria_estimator.py` - single source of truth for the demand
+  estimator. Calibrates the synthetic-microdata + NB2 GLM of Report Section 4.5 to
+  the real MURIA point-prevalence-survey microdata; `updatedantimicrobialglm.ipynb`
+  is a thin driver. Exports to `antimicrobialglm/artifacts/`.
+- `national_pipeline/national_pipeline.ipynb` - the canonical simulation path.
+- `national_pipeline/run_cms_two.py` - the batch/cluster twin (HiGHS solver).
 
 ---
 
-## Data privacy and regeneration
+## Data availability and privacy
 
-To comply with Google Maps Platform Terms of Service and Botswana Ministry of Health data-sharing restrictions, this repository **excludes** all raw geocoded data and private credentials, as well as datasets regarding antimicrobial use and procurement. 
+To comply with Google Maps Platform Terms of Service and Botswana Ministry of
+Health data-sharing restrictions, the repository **excludes all private data**.
+The following are gitignored and must be supplied/regenerated locally:
 
-**Excluded (via .gitignore):**
-- `.env` - contains private Google API key
-- `census_villages_geocoded.csv` and `census_villages_geocoded_google.csv` - raw latitude/longitude data from the Google Geocoding API
-- Intermediate checkpoint files (`checkpoint.csv`, `*geocoded*.csv`)
+- `.env` files (Google Maps API key).
+- Raw census microdata (`*.sav`) and geocoded settlement coordinates.
+- `PPS -BW Consolidated Raw.xlsx` - the raw MURIA point-prevalence survey (private
+  MoH data).
+- `antimicrobialglm/artifacts/` - PPS-derived demand parameters (regenerate via
+  `muria_estimator.py`).
+- `kaelo_users.db`, OSRM road extracts, and other regenerable intermediates.
 
-These files must be regenerated locally with a valid API key before running the pipeline.
+The two published Paramadhas-paper aggregate tables under `antimicrobialglm/` are
+retained, as they are public. Because all Botswana government datasets are private,
+full reproduction requires supplying equivalent local data.
 
 ---
 
-## Reproducibility
+## Reproducibility (summary)
 
-Note: as all datasets related to Botswana government data are not public, one must generate own datasets to test reproducibility.
+Detailed, per-stage instructions are in [`RUNNING.md`](RUNNING.md). In brief:
 
-1. **Create a `.env` file** inside `botswana_geocode/`:
-   ```
-   GOOGLE_API_KEY=<key>
-   ```
-2. **Run the geocoding script** to rebuild settlement coordinates:
-   ```
-   cd botswana_geocode && python geocode_google.py
-   ```
-3. **Start the OSRM server** and run the combined workflow notebook to produce distance/duration matrices.
-4. **Run the national pipeline notebook** to execute optimization and simulation.
+1. `python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt`
+2. Clean census data (`census_datacleaning/`).
+3. Geocode settlements with a Google Maps API key in `botswana_geocode/.env` (paid).
+4. Build the OSRM server (Docker) and query the routing matrices (`osrm_project/`).
+5. Fit the demand estimator on the MURIA data (`antimicrobialglm/`).
+6. Run the optimization and simulation (`national_pipeline/national_pipeline.ipynb`).
+
+The `app/` and containerized deployment are described in `deploy/` and
+`docker-compose.yml`.
