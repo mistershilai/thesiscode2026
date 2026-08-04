@@ -74,3 +74,7 @@ Final_Report/
 
 # Local-only project notes (excluded from published repo)
 CLAUDE.md
+
+# Geocoded coordinate files (PRIVATE; Google Maps ToS)
+census_datacleaning/census_population_with_coords.csv
+national_pipeline/gaborone_population_nearest_facilities_osrm.csv
