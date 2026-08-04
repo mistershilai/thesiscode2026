@@ -2,7 +2,7 @@
 .env
 app/frontend/.env.*
 
-# Claude Code config
+# Local editor/tool config
 .claude/
 
 # User / auth data
@@ -71,3 +71,6 @@ data/offline/
 
 # Thesis/paper - kept out of the code repo
 Final_Report/
+
+# Local-only project notes (excluded from published repo)
+CLAUDE.md
