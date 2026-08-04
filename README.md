@@ -16,7 +16,8 @@ multi-echelon robust/adjustable-robust optimization with SEIR epidemic coupling.
 
 For the end-to-end run order (commands, inputs/outputs, slow/paid steps) see
 [`RUNNING.md`](RUNNING.md). For the folder structure see [`LAYOUT.md`](LAYOUT.md).
-For orientation and conventions see [`CLAUDE.md`](CLAUDE.md).
+For the mapping from each paper figure/table to the code that produces it see
+[`EXHIBITS.md`](EXHIBITS.md).
 
 ---
 
