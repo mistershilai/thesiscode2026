@@ -57,3 +57,17 @@ antimicrobialglm/artifacts/
 
 # AWS payload for the missing-regions run (contains PRIVATE data — never commit)
 national_pipeline/aws/payload.tar.gz
+
+# Geocoded census population (PRIVATE; canonical, regenerate via botswana_geocode notebooks)
+botswana_geocode/census_population_2022_geocoded_final_uniform.csv
+data/debug/
+
+# Intermediate geocoded census (PRIVATE; coordinates)
+botswana_geocode/census_population_2022_geocoded_google_refined.csv
+botswana_geocode/census_population_2022_geocoded_google_strict.csv
+census_datacleaning/census_villages_geocoded.csv
+osrm_project/venv/
+data/offline/
+
+# Thesis/paper - kept out of the code repo
+Final_Report/

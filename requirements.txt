@@ -1,18 +1,23 @@
-gurobipy
-cvxpy
-numpy
-ipykernel
-pandas
-requests
-geopy
-tqdm
-matplotlib
-seaborn
-osmnx
-networkx
-scipy
-pyreadstat
-statsmodels
-python-dotenv
-pyarrow
-folium
+# Python 3.14 (developed on 3.14.2)
+# Pinned to the versions used to produce the published results.
+# gurobipy needs a Gurobi license (free academic licenses available); cvxpy
+# otherwise falls back to open-source solvers (HiGHS is used for the national run).
+
+cvxpy==1.8.0
+folium==0.20.0
+geopy==2.4.1
+gurobipy==13.0.1
+ipykernel==7.1.0
+matplotlib==3.10.8
+networkx==3.6.1
+numpy==2.4.1
+osmnx==2.0.7
+pandas==3.0.0
+pyarrow==23.0.1
+pyreadstat==1.3.3
+python-dotenv==1.2.1
+requests==2.32.5
+scipy==1.17.0
+seaborn==0.13.2
+statsmodels==0.14.6
+tqdm==4.67.2
