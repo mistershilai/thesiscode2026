@@ -33,25 +33,32 @@ def missing_regions():
 def main(serial=False):
     R.load_data()
     missing = missing_regions()
-    print("missing regions:", missing)
+    print("missing regions:", missing, flush=True)
     if not missing:
         print("nothing to do"); return
     rows, failures, done = [], [], []
     R.OUT_DIR.mkdir(exist_ok=True)
 
     def checkpoint():
-        # write after each region so a crash/kill never loses completed regions
+        # write after each region so a crash/kill never loses completed regions.
+        # run_region returns a LIST OF DATAFRAMES (one per model x scenario), so
+        # rows is a list of DataFrames -> concat, not pd.DataFrame(rows).
         if rows:
-            pd.DataFrame(rows).to_parquet(MISSING_OUT, index=False)
-            print(f"  [checkpoint] {len(done)} regions, {len(rows)} rows -> {MISSING_OUT.name}", flush=True)
+            df = pd.concat(rows, ignore_index=True)
+            df.to_parquet(MISSING_OUT, index=False)
+            print(f"  [checkpoint] {len(done)} regions, {len(df)} rows -> {MISSING_OUT.name}", flush=True)
 
     if serial:
-        for r in missing:
+        import time
+        for i, r in enumerate(missing, 1):
+            print(f"[start {i}/{len(missing)}] {r}", flush=True)
+            t0 = time.time()
             results, error = R.run_region(r)
             if error:
                 failures.append((r, error)); print(f"FAILED {r}: {error}", flush=True)
             else:
-                rows.extend(results); done.append(r); print(f"done {r} ({len(results)} rows)", flush=True)
+                rows.extend(results); done.append(r)
+                print(f"done {r} ({len(results)} rows) in {(time.time() - t0) / 60:.1f} min", flush=True)
                 checkpoint()
     else:
         workers = min(len(missing), max(1, (os.cpu_count() or 2) - 1))
@@ -94,8 +101,8 @@ def smoke(region="Okavango", T=2):
     dt = time.time() - t0
     if error:
         print(f"SMOKE FAILED: {error}"); return
-    df = pd.DataFrame(results)
-    print(f"SMOKE OK: {len(results)} rows in {dt:.0f}s | models={sorted(df['model'].unique())}"
+    df = pd.concat(results, ignore_index=True)  # results is a list of DataFrames, not dicts
+    print(f"SMOKE OK: {len(df)} rows in {dt:.0f}s | models={sorted(df['model'].unique())}"
           f" | scenarios={sorted(df['scenario'].unique())}")
     # prove the checkpoint + merge paths work
     R.OUT_DIR.mkdir(exist_ok=True)
