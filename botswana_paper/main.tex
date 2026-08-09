@@ -459,13 +459,13 @@ We report a Gaborone proof-of-concept, a national simulation, results driven by 
 We first study penicillin distribution across the Gaborone district, comprising CMS, Princess Marina Hospital, and downstream clinics and health posts, with $\Gamma = 10$ and $\kappa = 10$.
 Each policy is evaluated over $R = 12$ independent demand realizations of $T = 100$ periods each, drawn from the fitted negative-binomial model and shared across policies so the comparison is paired.
 Averages are taken within a realization and standard errors across them.
-Taking standard errors across the periods of a single path would understate uncertainty, since inventory carried between periods makes them dependent.
+Periods within a realization turn out to be close to independent here, with lag-one autocorrelation between $-0.13$ and $-0.02$, so a standard error taken across the periods of one path is a reasonable estimate of the spread of that path's average; averaging over $R$ independent realizations reduces the standard error by a further factor of roughly $\sqrt{R}$.
+We report the latter because it is the uncertainty in the quantity the table and figure actually state.
 Cost parameters are illustrative ($h=0.1$, $\Delta=100$, $c=1$ per unit).
 The three policies diverge sharply.
-The deterministic policy leaves on average about 13\% of demand unmet, with period-to-period shortfalls frequently above 20\%.
-Static robust cuts this to roughly 3.6\% by pre-positioning stock against worst-case deviations, and ARO-ADR to roughly 2.0\% (Figure~\ref{fig:gaborone}).
-\mynote{These three figures are the single-path values. Re-verify against the mean over the 12 replications once that run completes; the single path is replication 0, so any change should be small.}
-The adaptive gain is cheap: relative to static robust, ARO-ADR removes about 42\% of the remaining unmet demand for a procurement increase of only about 1.5\%, because affine recourse lets shipments respond to realized demand rather than committing in advance.
+The deterministic policy leaves on average $12.8\%$ of demand unmet, with period-to-period shortfalls frequently above $20\%$.
+Static robust cuts this to $3.3\%$ by pre-positioning stock against worst-case deviations, and ARO-ADR to $1.7\%$ (Figure~\ref{fig:gaborone}), an $86\%$ reduction relative to deterministic planning.
+The adaptive gain is cheap: relative to static robust, ARO-ADR removes about 48\% of the remaining unmet demand for a procurement increase of only about 1.5\%, because affine recourse lets shipments respond to realized demand rather than committing in advance.
 Figure~\ref{fig:gabcost} makes the economics explicit.
 The cost breakdown shows transport cost broadly similar across policies, so the performance gap is driven by inventory and shortage decisions rather than routing; the per-period net benefit of ARO-ADR over static robust (unmet demand eliminated minus added procurement) is positive in most periods; and the total objective under ARO-ADR is lowest, about 33\% below static robust and over 75\% below deterministic, since the shortage penalty dominates the objective.
 
