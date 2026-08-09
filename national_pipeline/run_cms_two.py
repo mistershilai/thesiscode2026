@@ -928,6 +928,17 @@ def simulate_aro_adr_under_draws_cms(
     arcs_from_to = [[[] for _ in range(N)] for _ in range(N)]
     for a, (i, j) in enumerate(arcs):
         arcs_from_to[node_idx[i]][node_idx[j]].append(a)
+
+    # Adjacency over adaptive arcs only, built once per call in O(|A|). The dual
+    # constraint loops below used to rescan all N destinations for every
+    # (node, class) pair in every period. Sorting the targets keeps the generated
+    # constraints, and their order, identical to the old loop. Mirrors the same
+    # change in national_pipeline.ipynb; keep the two in step.
+    _adaptive_out = [{} for _ in range(N)]
+    for a, (i, j) in enumerate(arcs):
+        if adaptive_arc_mask[a] == 1.0:
+            _adaptive_out[node_idx[i]].setdefault(node_idx[j], []).append(a)
+    adaptive_out = [sorted(d.items()) for d in _adaptive_out]
     if storage_cap_per_node is None:
         cap_vec = None
     else:
@@ -1005,9 +1016,7 @@ def simulate_aro_adr_under_draws_cms(
                               (float(np.sum(alpha_val[incoming_adaptive, k])) if incoming_adaptive else 0.0) - 1.0)
                 constraints.append(theta[n,k] + pi_plus[nk,n]  >= coeff_self * sigma_np[n,k])
                 constraints.append(theta[n,k] + pi_minus[nk,n] >= -coeff_self * sigma_np[n,k])
-                for r in range(N):
-                    nr_arcs = [a for a in arcs_from_to[n][r] if adaptive_arc_mask[a] == 1.0]
-                    if not nr_arcs: continue
+                for r, nr_arcs in adaptive_out[n]:
                     coeff_out = (-cp.sum(alpha[nr_arcs, k]) if alpha is not None
                                  else -float(np.sum(alpha_val[nr_arcs, k])))
                     constraints.append(theta[n,k] + pi_plus[nk,r]  >= coeff_out * sigma_np[r,k])
@@ -1022,9 +1031,7 @@ def simulate_aro_adr_under_draws_cms(
                                    (-float(np.sum(alpha_val[incoming_adaptive, k])) if incoming_adaptive else 0.0))
                 constraints.append(theta_ship[n,k] + pi_ship_plus[nk,n]  >= coeff_self_ship * sigma_np[n,k])
                 constraints.append(theta_ship[n,k] + pi_ship_minus[nk,n] >= -coeff_self_ship * sigma_np[n,k])
-                for r in range(N):
-                    nr_arcs = [a for a in arcs_from_to[n][r] if adaptive_arc_mask[a] == 1.0]
-                    if not nr_arcs: continue
+                for r, nr_arcs in adaptive_out[n]:
                     coeff_out_ship = (cp.sum(alpha[nr_arcs, k]) if alpha is not None
                                       else float(np.sum(alpha_val[nr_arcs, k])))
                     constraints.append(theta_ship[n,k] + pi_ship_plus[nk,r]  >= coeff_out_ship * sigma_np[r,k])
