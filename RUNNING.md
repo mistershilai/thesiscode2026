@@ -76,7 +76,16 @@ Then start the server (`docker compose up osrm` from the repo root, exposed on p
 Query the matrices — Notebook: `osrm_project/combined_workflow.ipynb` `[SLOW]` (many OSRM table queries)
 
 - Reads: `facilities_with_warehouses.csv`, running OSRM server
-- Writes: `data/processed/{distance_matrix_named,duration_matrix_named}.csv` (canonical, consumed downstream), `facility_id_lookup.csv`, plus `osrm_project/*_labeled.csv` and `matrix_summary.csv` (internal QA)
+- Writes: `data/processed/{distance_matrix_named,duration_matrix_named}.csv` (canonical, consumed downstream), `facility_id_lookup.csv`, plus `osrm_project/*_labeled.csv` and `outputs/{matrix_summary,facility_type_counts}.csv` (internal QA)
+- Figures: `outputs/figures/{facility_type_counts,speed_distribution,asymmetry_distribution}.{pdf,png}`
+
+`analyze()` defaults to the `*_labeled.csv` QA exports; to regenerate the paper's
+Figure 2 from the canonical matrices, call it directly:
+
+```python
+analyze(labeled_dist_csv='data/processed/distance_matrix_named.csv',
+        labeled_dur_csv='data/processed/duration_matrix_named.csv')
+```
 
 Note: the canonical matrices consumed by every downstream stage are the
 `data/processed/` copies. The `osrm_project/` copies of the plain/named matrices
@@ -129,7 +138,68 @@ sbatch national_pipeline/submit.sh   # from the cluster checkout
 
 ---
 
-## 6. Web application (optional)
+## 6. Figures for the paper
+
+Every plot is written by `figstyle.save_figure()`, which emits a **vector PDF**
+(the submission artifact) next to a PNG preview. INFORMS requires vector art for
+plots -- "the preferred formats are PDF or EPS, whenever they can guarantee the
+vector format" (INFORMS style instructions, Sec. 9.1) -- and rejects PNG/BMP
+bitmaps for graphs; the print edition is converted to grayscale by default, so
+`figstyle` also supplies the linestyle / marker / hatch encodings and the
+luminance-monotone colormap that keep figures readable without colour.
+
+Two conventions keep figures consistent with the typeset page:
+
+- **Drawn at printed size.** `figsize=figure_size(width_frac, aspect)` sets the
+  figure to the width it occupies in the paper, so `\includegraphics` scales it by
+  1.0 and the point sizes in the code are the point sizes on the page. (Previously
+  figures were drawn 5-22in wide and scaled down 2-3.5x, so nominally-10pt labels
+  printed anywhere from 2.8pt to 7.8pt.) `figure_size` also caps the height at
+  7.6in so a float cannot overrun the text block.
+- **No titles inside the art.** INFORMS typesets the caption via `\FIGURE`; an
+  in-figure title duplicates it in a different font. Row/column parameter labels
+  on grid figures are kept - those are labels, not titles.
+
+Every simulation caches its per-period metrics to `outputs/results/*.parquet`
+through `simcache.py`, so a figure can be restyled without re-solving:
+
+```python
+from simcache import load_run
+frames = load_run("sweep_gamma", keys=["true_kappa", "Gamma", "policy"])
+```
+
+Cached runs: `gaborone`, `sweep_kappa`, `sweep_gamma`, `sweep_penalty`,
+`seasonal`, `national`, `epidemic`. The CMS run keeps its own
+`cms_results_full.parquet` and is not touched by this mechanism.
+
+Regenerate figures by re-running the producing notebook (see `EXHIBITS.md` for
+the figure -> notebook map), then copy them into the paper and audit:
+
+```bash
+python3 sync_paper_figures.py           # copy outputs/figures/* -> botswana_paper/figures/
+python3 sync_paper_figures.py --check   # audit only; non-zero exit on any problem
+```
+
+The audit reports three things: plots with no vector PDF, figures too tall for the
+text block (the "Overfull \vbox ... while \output is active" warning, which on the
+page looks like the figure running down over the page number), and figures included
+at anything other than 1.0x their drawn size (which rescales all their text). When
+a figure legitimately changes size, it prints the `width=` to put in the `.tex`.
+
+`botswana_paper/{main,ecompanion}.tex` include figures **without an extension**
+and declare `\DeclareGraphicsExtensions{.pdf,.png,.jpg,.jpeg}`, so LaTeX picks
+the PDF whenever one exists and falls back to the PNG otherwise -- the paper
+always builds, and each regenerated figure silently upgrades to vector.
+
+Raster is correct for genuine images only: the hand-drawn logistics diagram, and
+screenshots of the interactive folium route maps
+(`outputs/figures/*.html` -> `cmstopmh`, `gabsmultiechelon`). Those must be
+supplied at >=300 dpi. `sync_paper_figures.py` lists them separately rather
+than flagging them.
+
+---
+
+## 7. Web application (optional)
 
 FastAPI backend + React frontend that reads the same canonical CSVs and recomputes
 optimization live (it does not read `cms_results.parquet`).
