@@ -126,7 +126,7 @@ This is the operating reality of the Central Medical Stores (CMS) in Botswana, w
 
 Three features make this allocation problem hard, and they are the features our model is built around.
 First, antimicrobial demand is \emph{statistically difficult}: facility-level counts are overdispersed and non-stationary, and the agency rarely has the distributional information that stochastic-programming approaches assume.
-Second, the network is \emph{large and heterogeneous}: a cost-minimizing objective treats a unit of unmet demand as equally costly wherever it falls, so nothing in the objective itself prevents shortfalls from settling on the districts that are most expensive to reach, and both tractability and the distribution of service must be designed in rather than assumed.
+Second, the network is \emph{large and heterogeneous}: a cost-minimizing objective values unmet demand equally wherever it falls, so nothing prevents shortfalls settling on the districts most expensive to reach, and both tractability and the distribution of service must be designed in.
 Third, demand is ultimately \emph{shaped by disease dynamics}: because antimicrobials treat infections, a stockout does not merely register as unmet demand in one period but can prolong infectiousness and alter future need, so a realistic evaluation of an allocation policy should subject it to epidemic-driven, non-stationary demand.
 
 \paragraph{Approach.}
@@ -239,7 +239,8 @@ For each node $n$ and class $k$, the parameter $\Delta_{n,k}$ is the penalty per
 Each facility has storage capacity $s_n$, each vehicle trip has shipment capacity $\text{cap}$, and $M$ is a large constant used in activation constraints.
 The realized demand for class $k$ at node $n$ in period $t$ is $D_{n,k}^{(t)}$.
 
-The decision variables, chosen at the start of each period, are the shipment $F_{(i,j),k}^{(t)}$ of class $k$ on arc $(i,j)$; the number of vehicle trips $\lambda_{(i,j)}^{(t)} \in \integers_+$ on that arc and a binary activation $y_{(i,j)}^{(t)}$; the procurement quantity $q_k^{(t)}$ at CMS; and, resolved at the end of the period, the ending inventory $I_{n,k}^{(t+1)}$ and unmet demand $U_{n,k}^{(t)}$.
+The decisions taken at the start of each period are the shipment $F_{(i,j),k}^{(t)}$ of class $k$ on arc $(i,j)$, the number of vehicle trips $\lambda_{(i,j)}^{(t)} \in \integers_+$ on that arc with a binary activation $y_{(i,j)}^{(t)}$, and the procurement quantity $q_k^{(t)}$ at CMS.
+The ending inventory $I_{n,k}^{(t+1)}$ and the unmet demand $U_{n,k}^{(t)}$ are resolved at the close of the period.
 We write $\bar D_{n,k}^{(t)}$ for the nominal (forecast) demand; the robust extension of \Sec\ref{sec:robust} introduces the deviation $\xi_{n,k}^{(t)}$, its bound $\sigma_{n,k}^{(t)}$, and the budget $\Gamma$.
 
 \subsection{Deterministic Baseline}
@@ -453,7 +454,9 @@ The deterministic policy leaves on average $12.8\%$ of demand unmet, with period
 Static robust cuts this to $3.3\%$ by pre-positioning stock against worst-case deviations, and ARO-ADR to $1.7\%$ (Figure~\ref{fig:gaborone}), an $86\%$ reduction relative to deterministic planning.
 The adaptive gain is cheap: relative to static robust, ARO-ADR removes about 48\% of the remaining unmet demand for a procurement increase of only about 1.5\%, because affine recourse lets shipments respond to realized demand rather than committing in advance.
 Figure~\ref{fig:gabcost} makes the economics explicit.
-The cost breakdown shows transport cost broadly similar across policies, so the performance gap is driven by inventory and shortage decisions rather than routing; the per-period net benefit of ARO-ADR over static robust (unmet demand eliminated minus added procurement) is positive in most periods; and the total objective under ARO-ADR is lowest, about 33\% below static robust and over 75\% below deterministic, since the shortage penalty dominates the objective.
+Transport cost is broadly similar across policies, so the performance gap comes from inventory and shortage decisions rather than routing.
+The per-period net benefit of ARO-ADR over static robust, unmet demand eliminated minus added procurement, is positive in most periods.
+The total objective under ARO-ADR is lowest, about 33\% below static robust and over 75\% below deterministic, since the shortage penalty dominates.
 
 \begin{figure}[htbp]
     \centering
@@ -569,12 +572,15 @@ Adaptivity is thus not only a performance improvement but a hedge against gettin
     \label{fig:kappa}
 \end{figure}
 
-Varying $\Gamma$ (Section~EC.4) shows the value of adaptivity concentrating in an identifiable regime: the ARO-ADR advantage over static robust is largest at small $\Gamma$ and high variability (low $\kappa$), and shrinks as $\Gamma$ grows, because a large budget forces the optimizer to worst-case over so many nodes that it suppresses the adaptive component and the policy collapses toward the static one.
+Varying $\Gamma$ (Section~EC.4) locates the value of adaptivity in an identifiable regime: the ARO-ADR advantage over static robust is largest at small $\Gamma$ and high variability (low $\kappa$), and shrinks as $\Gamma$ grows.
+A large budget forces the optimizer to worst-case over so many nodes that the adaptive component is suppressed and the policy collapses toward the static one.
 The managerial reading is direct: invest in adaptive recourse when demand is volatile and the uncertainty budget is moderate; a simpler static policy suffices otherwise.
 
 Finally, we vary the shortage penalty $\Delta$ over $[0.1, 100]$ at fixed unit procurement cost $1$ (Section~EC.4).
 The response is governed by a threshold near the procurement cost.
-When $\Delta$ is at or below unit cost, serving demand is not cost-effective and unmet demand rises sharply; once $\Delta$ rises well above it (here beyond roughly $10$), realized unmet demand saturates and becomes essentially invariant to the penalty, because achievable service is then pinned by physical capacity and, for the robust policies, the uncertainty set, none of which depend on $\Delta$.
+When $\Delta$ is at or below unit cost, serving demand is not cost-effective and unmet demand rises sharply.
+Once $\Delta$ rises well above it, beyond roughly $10$ here, realized unmet demand saturates and becomes essentially invariant to the penalty.
+Achievable service is then pinned by physical capacity and, for the robust policies, by the uncertainty set, neither of which depends on $\Delta$.
 Since the clinical cost of an antimicrobial stockout far exceeds unit procurement, the operationally relevant regime is exactly this saturated one, in which the policy ordering holds and the recommended policy is insensitive to the exact penalty an agency chooses.
 
 \subsection{Extension: Epidemic-Driven Demand}
@@ -628,7 +634,8 @@ First, adaptive recourse is worth adopting: it cuts unmet demand by about three-
 Second, the gains are broad rather than concentrated: solving per district lifts every district's service level, including the worst-served, so an agency does not trade rural coverage for urban.
 The improvement is in the level of service everywhere, not in the relative dispersion across districts, and \Sec\ref{sec:equity} makes that distinction precise.
 Third, calibration is forgiving in the ways that matter and demanding in the ways one can prepare for.
-The recommended policy is insensitive to the shortage penalty in the operationally relevant regime, so an agency need not pin down the clinical cost of a stockout precisely; but performance does depend on the dispersion $\kappa$ and budget $\Gamma$, and the value of adaptivity is largest under high volatility and a moderate budget, which is exactly where we recommend investing in it.
+The recommended policy is insensitive to the shortage penalty in the operationally relevant regime, so an agency need not pin down the clinical cost of a stockout precisely.
+Performance does depend on the dispersion $\kappa$ and the budget $\Gamma$: adaptivity is worth most under high volatility and a moderate budget, and that is where we recommend investing in it.
 
 \paragraph{Deployability.}
 The framework is designed as decision support that an agency can drive with data it already holds or can assemble: a facility list with locations, a routing engine, catchment populations, and consumption records of the kind CMS provided.
