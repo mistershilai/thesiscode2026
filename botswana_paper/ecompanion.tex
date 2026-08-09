@@ -63,12 +63,12 @@ Substituting the affine rule into the inventory balance and collecting the terms
 \end{equation}
 Robust feasibility requires that its worst case over $\mathcal{U}^{(k)}$ not exceed the deterministic slack:
 \begin{align}
-\max_{\xi\in\mathcal{U}^{(k)}}\Big[\Big(\textstyle\sum_{j:(j,n)\in A}\alpha_{(j,n),k}^{(t)} - 1\Big)\xi_{n,k}^{(t)}
-- \sum_{r:(n,r)\in A}\alpha_{(n,r),k}^{(t)}\xi_{r,k}^{(t)}\Big]
-\le\;& I_{n,k}^{(t+1)} - I_{n,k}^{(t)}
-- \textstyle\sum_{j:(j,n)\in A}\bar F_{(j,n),k}^{(t)} \notag\\
-& + \textstyle\sum_{r:(n,r)\in A}\bar F_{(n,r),k}^{(t)}
-- \mathbf{1}_{\{n=0\}}q_k^{(t)}
+&\max_{\xi\in\mathcal{U}^{(k)}}\Big[\Big(\textstyle\sum_{j:(j,n)\in A}\alpha_{(j,n),k}^{(t)} - 1\Big)\xi_{n,k}^{(t)}
+- \sum_{r:(n,r)\in A}\alpha_{(n,r),k}^{(t)}\xi_{r,k}^{(t)}\Big] \notag\\
+&\qquad \le\; I_{n,k}^{(t+1)} - I_{n,k}^{(t)}
+- \textstyle\sum_{j:(j,n)\in A}\bar F_{(j,n),k}^{(t)}
++ \textstyle\sum_{r:(n,r)\in A}\bar F_{(n,r),k}^{(t)} \notag\\
+&\qquad\quad - \mathbf{1}_{\{n=0\}}q_k^{(t)}
 + \bar D_{n,k}^{(t)} - U_{n,k}^{(t)}.
 \label{eq:ec-inv-robust}
 \end{align}
@@ -201,13 +201,13 @@ The ARO-ADR advantage over static robust is largest at small $\Gamma$ and high v
 
 \paragraph{Shortage penalty.}
 Figure~\ref{fig:penalty} varies the per-unit shortage penalty at fixed unit procurement cost.
-Below the procurement cost, serving demand is not cost-effective and unmet demand rises sharply; above it, realized unmet demand saturates and is essentially invariant to the penalty, because achievable service is pinned by physical capacity and the uncertainty set.
+Below the procurement cost, serving demand is not cost-effective and unmet demand rises sharply; far above it, realized unmet demand saturates and is essentially invariant to the penalty, because achievable service is pinned by physical capacity and the uncertainty set.
 The operationally relevant regime, where clinical stockout costs far exceed procurement, is the saturated one.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.95\linewidth]{figures/penalty_sensitivity}
-    \caption{Realized unmet demand (\%) across policies for varying shortage penalty (columns; unit procurement cost $1$) and dispersion $\kappa$ (rows). Above the procurement cost, unmet demand saturates and the policy ordering is insensitive to the penalty.}
+    \caption{Realized unmet demand (\%) across policies for varying shortage penalty (columns; unit procurement cost $1$) and dispersion $\kappa$ (rows). Far above the procurement cost, unmet demand saturates and the policy ordering is insensitive to the penalty.}
     \label{fig:penalty}
 \end{figure}
 

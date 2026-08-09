@@ -332,7 +332,8 @@ The adjustable robust allocation problem therefore admits an exact single-level 
 \end{proposition}
 
 The proof dualizes the inner maximization using the Bertsimas--Sim representation of $\mathcal{U}^{(k)}$ and linear programming duality; Section~EC.1 carries it out and states the complete constraint system.
-Retaining the min--max structure would be intractable at national scale, whereas the reformulated program is an ordinary mixed-integer program, which we solve with off-the-shelf solvers \citep{gurobi,mosek}.
+Retaining the min--max structure would be intractable at national scale, whereas the reformulated program is an ordinary mixed-integer program.
+We model it in CVXPY \citep{cvxpy} and solve it with HiGHS \citep{highs}.
 
 To reach national scale we add one further step.
 Rather than solve a single program over all 614 facilities, we decompose by district and solve 18 independent subproblems.
@@ -518,7 +519,7 @@ To test the policies on empirically grounded costs rather than illustrative ones
 We simulate all 18 districts.
 Table~\ref{tab:cms} reports the results.
 The policy ordering is unchanged, and the coverage gains are if anything larger: ARO-ADR cuts unmet demand from 21.7\% (deterministic) to 3.4\% in 2025--26 and from 19.2\% to 2.8\% in 2026--27.
-The procurement premium of ARO-ADR over static robust is now 6.5\% and 6.4\%, against 0.9\% under illustrative costs, because the premium is a cost ratio and CMS's actual prices differ from the convenience value $c=1$.
+The procurement premium of ARO-ADR over static robust is now 6.5\% and 6.4\%, against 1.0\% under illustrative costs, because the premium is a cost ratio and CMS's actual prices differ from the convenience value $c=1$.
 The total objective remains lowest under ARO-ADR in both horizons, so the added procurement is more than repaid by avoided shortages.
 The geographic pattern (Figure~\ref{fig:cmsmap}) mirrors the simulation.
 In 2025--26 the deterministic policy leaves North East, Ghanzi and Kgalagadi South at $29.6\%$, $27.2\%$ and $26.7\%$ unmet; ARO-ADR brings the worst-served district to $4.6\%$.
@@ -585,7 +586,7 @@ The managerial reading is direct: invest in adaptive recourse when demand is vol
 Finally, we vary the shortage penalty $\Delta$ over $[0.1, 100]$ at fixed unit procurement cost $1$ (Section~EC.4).
 The response is governed by a threshold near the procurement cost.
 When $\Delta$ is at or below unit cost, serving demand is not cost-effective and unmet demand rises sharply.
-Once $\Delta$ rises well above it, beyond roughly $10$ here, realized unmet demand saturates and becomes essentially invariant to the penalty.
+Once $\Delta$ rises far above it, beyond roughly $10$ here, realized unmet demand saturates and becomes essentially invariant to the penalty.
 Achievable service is then pinned by physical capacity and, for the robust policies, by the uncertainty set, neither of which depends on $\Delta$.
 The operationally relevant regime is the saturated one.
 A stockout leaves an infection untreated or forces second-line therapy, at an attributable cost of US\$2{,}291 to US\$12{,}044 per case in upper-middle-income economies like Botswana \citep{poudel2023}.
