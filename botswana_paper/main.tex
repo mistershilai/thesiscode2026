@@ -449,6 +449,7 @@ We report a Gaborone proof-of-concept, a national simulation, results driven by 
 We first study penicillin distribution across the Gaborone district, comprising CMS, Princess Marina Hospital, and downstream clinics and health posts, with $\Gamma = 10$ and $\kappa = 10$.
 Each policy is evaluated over $12$ independent demand realizations of $T = 100$ periods, drawn from the fitted negative-binomial model and shared across policies.
 Cost parameters are illustrative ($h=0.1$, $\Delta=100$, $c=1$ per unit).
+Section~EC.4 shows that realized service is unchanged for any $\Delta$ more than about ten times $c$, so what matters is that the ratio clears that threshold, not its exact value.
 The three policies diverge sharply.
 The deterministic policy leaves on average $12.8\%$ of demand unmet, with period-to-period shortfalls frequently above $20\%$.
 Static robust cuts this to $3.3\%$ by pre-positioning stock against worst-case deviations, and ARO-ADR to $1.7\%$ (Figure~\ref{fig:gaborone}), an $86\%$ reduction relative to deterministic planning.
