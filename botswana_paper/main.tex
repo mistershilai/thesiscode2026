@@ -126,11 +126,11 @@ This is the operating reality of the Central Medical Stores (CMS) in Botswana, w
 
 Three features make this allocation problem hard, and they are the features our model is built around.
 First, antimicrobial demand is \emph{statistically difficult}: facility-level counts are overdispersed and non-stationary, and the agency rarely has the distributional information that stochastic-programming approaches assume.
-Second, the network is \emph{large and heterogeneous}: a cost-minimizing objective values unmet demand equally wherever it falls, so nothing prevents shortfalls settling on the districts most expensive to reach, and both tractability and the distribution of service must be designed in.
+Second, the network is \emph{large and heterogeneous}: nothing in a cost objective prevents shortfalls from settling on the districts most expensive to reach, so both tractability and the distribution of service must be designed in.
 Third, demand is ultimately \emph{shaped by disease dynamics}: because antimicrobials treat infections, a stockout does not merely register as unmet demand in one period but can prolong infectiousness and alter future need, so a realistic evaluation of an allocation policy should subject it to epidemic-driven, non-stationary demand.
 
 \paragraph{Approach.}
-We formulate the agency's problem as a multi-echelon, multi-period network optimization and address demand uncertainty through robust optimization, which is the core of the paper.
+We formulate the agency's problem as a multi-echelon, multi-period network optimization and address demand uncertainty through robust optimization.
 Rather than committing shipments entirely in advance, we allow them to adapt to demand as it is revealed, using affine decision rules; we refer to the resulting policy as adjustable robust optimization with affine decision rules (ARO-ADR).
 The central technical step is a dualization that converts the semi-infinite robust constraints into a finite system, yielding a single-level mixed-integer program that, together with a district decomposition that gives every district a dedicated allocation, remains solvable at national scale.
 We drive the model with a Medical Demand Estimator (MDE) calibrated to catchment populations and point-prevalence-survey data.
@@ -139,29 +139,15 @@ Finally, to test the policies against demand that is not merely uncertain but ep
 \paragraph{Contributions.}
 This paper makes three contributions.
 \begin{enumerate}
-\item \emph{A tractable robust multi-echelon allocation model at national scale.} We formulate the agency's problem and develop static and affinely-adjustable robust versions, then derive a single-level dual reformulation that, paired with a district decomposition that gives every district a dedicated allocation, gives a mixed-integer program solvable across 614 facilities and 18 districts within practical time limits. This is the technical core of the paper.
-\item \emph{Empirical evaluation on real procurement data with actionable managerial guidance.} Driving the model with a demand estimator calibrated to survey data and with actual CMS consumption and pricing records, we show that adaptive recourse yields large coverage gains in every district, including the worst-served, at a modest procurement premium, and we characterize the regime in which adaptivity is worth its cost and the sense in which the recommended policy is insensitive to the shortage penalty.
+\item \emph{A tractable robust multi-echelon allocation model at national scale.} We formulate the agency's problem, develop static and affinely-adjustable robust versions, and derive a single-level dual reformulation. Paired with a district decomposition that gives every district a dedicated allocation, it yields a mixed-integer program solvable across 614 facilities and 18 districts within practical time limits. This is the technical core of the paper.
+\item \emph{Empirical evaluation on real procurement data with actionable managerial guidance.} Driving the model with a demand estimator calibrated to survey data and with actual CMS consumption and pricing records, we show that adaptive recourse yields large coverage gains in every district, including the worst-served, at a modest procurement premium. We also characterize the regime in which adaptivity is worth its cost, and the sense in which the recommended policy is insensitive to the shortage penalty.
 \item \emph{An epidemic-driven-demand extension.} We couple the allocation model to a two-strain SEIR system in closed loop: each period's realized deliveries set the treatment rates that generate the next period's demand, so a policy faces the demand its own shortfalls create. We use it to test whether the policy ordering persists once demand responds to supply. We present this as a proof-of-concept extension rather than a validated epidemiological model, and read its results as coverage gains rather than changes to long-run resistance.
 \end{enumerate}
-
-\paragraph{Managerial takeaways.}
-Three findings are directly actionable for a medical-stores agency.
-The adaptive policy cuts average unmet demand by roughly three-quarters relative to current-practice deterministic planning, and it does so in \emph{every} district, including the worst-served, rather than trading rural for urban coverage.
-The value of adaptivity is largest in a specific and identifiable regime, high demand variability and a moderate uncertainty budget, which tells an agency when the added modeling effort pays off and when a simpler static policy suffices.
-Finally, a stockout costs orders of magnitude more than a unit of procurement \citep{poudel2023}, so service is limited by network capacity rather than by the shortage penalty, and the recommendation is insensitive to that penalty.
-
-\paragraph{Related literature.}
-Our work sits at the intersection of three streams.
-The first is robust and adjustable robust optimization for inventory and supply chains: budgeted uncertainty sets \citep{bertsim04}, their tractable robust counterparts \citep{bental}, and affine decision rules for multistage adaptivity \citep{yanikoglu2018aro}.
-We use this machinery but apply it to a network with endogenous, epidemiologically-driven demand, which is where our modeling novelty lies rather than in the robust apparatus itself.
-The second is healthcare and humanitarian operations under epidemic uncertainty, including prescriptive analytics for pandemic response \citep{bertsimas21} and resource allocation under outbreak-driven demand \citep{govindan20}, together with the pharmaceutical-supply-chain reliability and resilience literature \citep{tkr22,ivanov22}.
-The third is the modeling of antimicrobial resistance as a dynamic externality of treatment \citep{lax01,kd20}, and the statistics of overdispersed health-service counts that motivate our negative-binomial demand model \citep{sec2017,ab2022,rath2024}.
-We defer a fuller discussion to \Sec\ref{sec:related}.
 
 \paragraph{Outline.}
 \Sec\ref{sec:related} positions the paper in the literature.
 \Sec\ref{sec:model} presents the network, notation, and the deterministic baseline model.
-\Sec\ref{sec:robust} develops the robust and affinely-adjustable formulations and states the tractable reformulation, whose derivation is given in the e-companion; this section is the technical core.
+\Sec\ref{sec:robust} develops the robust and affinely-adjustable formulations and states the tractable reformulation, whose derivation is given in the e-companion.
 \Sec\ref{sec:demand} describes the Medical Demand Estimator.
 \Sec\ref{sec:results} reports the numerical study on Botswana data, including an epidemic-driven-demand extension, and \Sec\ref{sec:discussion} draws out managerial implications and limitations.
 \Sec\ref{sec:conclusion} concludes.
@@ -291,9 +277,8 @@ This deterministic program is the benchmark against which we measure the value o
 \section{Robust and Adjustable Robust Formulations}
 \label{sec:robust}
 
-The deterministic model presumes demand is known.
-In practice it is not, and the central methodological question of the paper is how the agency should hedge.
-This section develops that hedge in three steps: a budgeted uncertainty set, a static robust counterpart, and an affinely-adjustable policy whose tractable reformulation is the paper's technical core.
+The deterministic model presumes demand is known; in practice it is not.
+This section develops the hedge in three steps: a budgeted uncertainty set, a static robust counterpart, and an affinely-adjustable policy whose tractable reformulation is the paper's technical core.
 
 \subsection{Budgeted Uncertainty Set}
 \label{sec:uncertainty}
@@ -346,9 +331,8 @@ For the budgeted uncertainty set \eqref{eq:uncertaintyset} and the affine decisi
 The adjustable robust allocation problem therefore admits an exact single-level mixed-integer linear reformulation whose size grows linearly in $|N|$, $|A|$, and $K$.
 \end{proposition}
 
-The proof dualizes the inner maximization using the Bertsimas--Sim representation of $\mathcal{U}^{(k)}$ and linear programming duality; we carry it out in full in Section~EC.1 of the e-companion, where the complete constraint system is stated.
-Proposition~\ref{prop:reformulation} is what makes the framework usable: a naive formulation that retains the min--max structure is intractable at national scale, whereas the reformulated program is an ordinary mixed-integer program.
-We solve it with off-the-shelf solvers \citep{gurobi,mosek}.
+The proof dualizes the inner maximization using the Bertsimas--Sim representation of $\mathcal{U}^{(k)}$ and linear programming duality; Section~EC.1 carries it out and states the complete constraint system.
+Retaining the min--max structure would be intractable at national scale, whereas the reformulated program is an ordinary mixed-integer program, which we solve with off-the-shelf solvers \citep{gurobi,mosek}.
 
 To reach national scale we add one further step.
 Rather than solve a single program over all 614 facilities, we decompose by district and solve 18 independent subproblems.
@@ -369,9 +353,8 @@ s_d \;=\; 1 \;-\;
      {\sum_{n \in d}\sum_{k,t} D_{n,k}^{(t)}}
 \label{eq:service}
 \end{equation}
-denote the service level of district $d$, the fraction of its demand met over the horizon.
-An allocation induces the service vector $s = (s_d)_{d \in \mathcal{D}}$, and an equity criterion is a rule for aggregating that vector into a single objective.
-We adopt the $\alpha$-fairness family,
+be the service level of district $d$, the fraction of its demand met over the horizon, and let $s = (s_d)_{d \in \mathcal{D}}$ be the service vector.
+We aggregate it with the $\alpha$-fairness family,
 \begin{equation}
 W_\alpha(s) \;=\;
 \begin{cases}
@@ -380,19 +363,26 @@ W_\alpha(s) \;=\;
 \end{cases}
 \label{eq:alphafair}
 \end{equation}
-which spans the criteria of interest with one parameter: $\alpha = 0$ is utilitarian and maximizes total service, $\alpha = 1$ is proportional fairness, and $\alpha \to \infty$ is max-min fairness, which maximizes the service level of the worst-served district.
-The cost of insisting on fairness is the price of fairness,
+where one parameter spans the criteria of interest: $\alpha = 0$ is utilitarian, $\alpha = 1$ is proportional fairness, and $\alpha \to \infty$ is max-min, which maximizes the worst district's service.
+Since $W_\alpha$ is not in service units, we report the equally-distributed-equivalent service
 \begin{equation}
-\mathrm{POF}(\alpha) \;=\;
-\frac{\ones^{T} s^{\star}_{0} - \ones^{T} s^{\star}_{\alpha}}{\ones^{T} s^{\star}_{0}},
-\label{eq:pof}
+s^{\mathrm{ede}}_\alpha \;=\;
+\begin{cases}
+\displaystyle\left( |\mathcal{D}|^{-1} \textstyle\sum_{d \in \mathcal{D}} s_d^{\,1-\alpha} \right)^{1/(1-\alpha)}, & \alpha \neq 1,\\[2ex]
+\displaystyle\exp\left( |\mathcal{D}|^{-1} \textstyle\sum_{d \in \mathcal{D}} \log s_d \right), & \alpha = 1,
+\end{cases}
+\label{eq:ede}
 \end{equation}
-the relative loss in total service from optimizing $W_\alpha$ rather than $W_0$ \citep{bft11}.
+the uniform service level a planner with aversion $\alpha$ would accept in place of $s$.
+It is the mean at $\alpha = 0$ and the worst district as $\alpha \to \infty$, so one curve covers the family.
+
+Comparing criteria is sometimes unnecessary.
+If one allocation's sorted service vector dominates another's component by component, every symmetric criterion increasing in district service prefers it, and so does $W_\alpha$ for every $\alpha$.
+\Sec\ref{sec:cms-results} shows our policies fall in this case.
 
 The district decomposition is a \emph{procedural} mechanism, not a solution to \eqref{eq:alphafair} for any $\alpha$.
-Independent subproblems forbid shipments across district boundaries, so by construction no allocation can raise total service by moving supply between districts; each district is guaranteed its own allocation and transport whatever its size.
-That guarantee is not an outcome criterion, so we do not report a $\mathrm{POF}$, which compares fairness-optimal allocations.
-We instead evaluate the realized service vector against \eqref{eq:alphafair} in Figure~\ref{fig:equity}.
+Independent subproblems forbid shipments across district boundaries: each district is guaranteed its own allocation and transport whatever its size, at the cost of whatever pooling supply might gain.
+We evaluate the realized service vector against \eqref{eq:alphafair} in Figure~\ref{fig:equity} rather than optimizing it.
 
 % ============================ DEMAND MODEL ============================
 \section{The Medical Demand Estimator}
@@ -441,7 +431,6 @@ The single fitted PPS yields a large $\hat\kappa$ (near-Poisson variability); be
 We evaluate three policies: the \emph{deterministic} baseline of \Sec\ref{sec:baseline}, which plans on nominal demand; the \emph{static robust} policy of \Sec\ref{sec:static}; and the adjustable \emph{ARO-ADR} policy of \Sec\ref{sec:adr}.
 In each period the simulator draws demand, computes shipments under the policy, and rolls inventory forward by the balance equations; deviation bounds follow \eqref{eq:sigma}.
 Demand is drawn from the fitted negative-binomial model, and all policies see identical realizations for comparability.
-We report a Gaborone proof-of-concept, a national simulation, results driven by real procurement data, sensitivity analyses, and an epidemic-driven extension.
 
 \subsection{Gaborone Proof-of-Concept}
 \label{sec:gaborone}
@@ -497,7 +486,7 @@ We next solve the model for all 18 districts under the district decomposition of
 Table~\ref{tab:national} reports average per-period performance.
 The ordering of the proof-of-concept persists at national scale: ARO-ADR reduces unmet demand to 1.9\%, an 86\% reduction relative to deterministic and 48\% relative to static robust, at a 0.9\% procurement premium over static robust under these illustrative unit costs, and a total objective 26\% below static robust.
 Beyond the average, the geographic distribution matters: under ARO-ADR the worst-served district sits close to the national mean, whereas the deterministic policy concentrates shortfalls in high-demand districts (Figure~\ref{fig:heatmap}).
-We quantify this in \Sec\ref{sec:cms-results}, where the effect is a uniform improvement in level rather than a reduction in relative inequality.
+\Sec\ref{sec:cms-results} quantifies this.
 
 \begin{table}[t]
 \centering
@@ -528,15 +517,15 @@ To test the policies on empirically grounded costs rather than illustrative ones
 We simulate all 18 districts.
 Table~\ref{tab:cms} reports the results.
 The policy ordering is unchanged, and the coverage gains are if anything larger: ARO-ADR cuts unmet demand from 21.7\% (deterministic) to 3.4\% in 2025--26 and from 19.2\% to 2.8\% in 2026--27.
-The procurement premium of ARO-ADR over static robust is now 6.5\% and 6.4\%, materially larger than the 0.9\% under illustrative costs, because the premium is a cost ratio and CMS's actual prices differ from the convenience value $c=1$.
-We report both figures rather than the smaller illustrative one; the total objective remains lowest under ARO-ADR in both horizons, so the added procurement is more than repaid by avoided shortages.
+The procurement premium of ARO-ADR over static robust is now 6.5\% and 6.4\%, against 0.9\% under illustrative costs, because the premium is a cost ratio and CMS's actual prices differ from the convenience value $c=1$.
+The total objective remains lowest under ARO-ADR in both horizons, so the added procurement is more than repaid by avoided shortages.
 The geographic pattern (Figure~\ref{fig:cmsmap}) mirrors the simulation.
-In 2025--26 the deterministic policy leaves North East, Ghanzi and Kgalagadi South at $29.6\%$, $27.2\%$ and $26.7\%$ unmet, and ARO-ADR brings the worst-served district to $4.6\%$: in the terms of \Sec\ref{sec:equity}, $\min_d s_d$ rises from $0.704$ to $0.954$.
-Relative dispersion is unchanged, however, with a coefficient of variation across districts of $0.16$ under ARO-ADR against $0.18$ under deterministic and a Gini coefficient of $0.08$ against $0.10$.
-The gain is a uniform improvement in level, not a reduction in inequality.
-Figure~\ref{fig:equity} evaluates the allocation against the criterion of \Sec\ref{sec:equity}.
-The sorted service vectors are ordered rank by rank, by at least $2.3$ and $11.0$ percentage points, so every welfare function increasing in district service ranks the policies identically and the choice does not require committing to an $\alpha$.
-The margin widens with $\alpha$, from $18.4$ percentage points of equivalent service at $\alpha=0$ to $25.0$ under max-min, because the ARO-ADR service vector is nearly flat and the deterministic one is not.
+In 2025--26 the deterministic policy leaves North East, Ghanzi and Kgalagadi South at $29.6\%$, $27.2\%$ and $26.7\%$ unmet; ARO-ADR brings the worst-served district to $4.6\%$.
+Shortfalls shrink almost proportionally rather than being redistributed, so the gain is a uniform improvement in level rather than a reduction in relative inequality.
+Figure~\ref{fig:equity} applies the criterion of \Sec\ref{sec:equity}.
+In both scenarios the sorted service vectors dominate component by component, by at least $2.3$ percentage points from static robust to ARO-ADR and $11.0$ from deterministic to static robust.
+The ranking is therefore the same under every $\alpha$: choosing a policy requires no position on how to weigh the worst-served district.
+The margin nonetheless widens with $\alpha$, from $18.4$ percentage points of equivalent service at $\alpha = 0$ to $25.0$ under max-min, since ARO-ADR's district service levels sit close together while the deterministic ones spread out.
 A disaggregated breakdown by cost component and district is given in Section~EC.4.
 
 \begin{figure}[t]
@@ -615,10 +604,10 @@ The allocation models do not anticipate this feedback; it enters through the env
 We present this as a proof-of-concept coupling rather than a validated epidemiological model; the full compartmental system and its calibration are in Section~EC.3.
 
 Over a two-year horizon the policy ordering is preserved: ARO-ADR holds average unmet demand near 0.1\%, against 3.5\% for static robust and 12.7\% for deterministic (Table~\ref{tab:epi}), with near-zero shortfalls even during epidemic demand spikes that push the deterministic policy above 25\%.
-The effect on resistance is more subtle and we are careful not to overclaim it.
-Better-supplied policies clear both strains faster, so they end with a lower \emph{absolute} resistant burden.
-But they also show a marginally higher resistant \emph{fraction}, because faster clearance of susceptible infections shrinks the denominator; extending the compartmental model to a 50-year horizon (Section~EC.3) shows this fraction gap is a small, persistent denominator effect that never reverses into greater resistance emergence.
-The framework's benefits are therefore best read as coverage gains, substantial and robust reductions in unmet demand, rather than as changes to long-run resistance dynamics.
+The effect on resistance is more subtle.
+Better-supplied policies clear both strains faster, so they end with a lower \emph{absolute} resistant burden but a marginally higher resistant \emph{fraction}, because faster clearance of susceptible infections shrinks the denominator.
+Extending the compartmental model to a 50-year horizon (Section~EC.3) shows this gap is a small, persistent denominator effect that never reverses into greater resistance emergence.
+The benefits are therefore best read as coverage gains rather than as changes to long-run resistance dynamics.
 
 \begin{table}[t]
 \centering
@@ -660,21 +649,19 @@ The framework is designed as decision support that an agency can drive with data
 The tractable reformulation and district decomposition keep solve times within a replenishment cycle, and the model accepts richer demand inputs without structural change as data improve.
 
 \paragraph{Limitations.}
-Several caveats bound the claims.
 The demand estimator is calibrated to a single inpatient point-prevalence survey from one district, so the forecasts are best read as lower bounds on true facility need rather than complete demand; the optimization structure is unchanged by better inputs, but the numbers would move.
 The results are simulation-based: we evaluate policies on real cost and consumption data, but no policy has been deployed, so we observe modeled rather than realized outcomes.
 The epidemic coupling is a proof of concept with parameters partly borrowed from the literature, and its resistance results should be read as coverage effects, not validated resistance forecasts.
 Finally, we take procurement prices and routing distances as fixed and known; supply-side uncertainty in lead times and prices, which we do not model, is a natural and important extension.
-Equity enters our design procedurally, through the district decomposition, rather than as a criterion optimized over outcomes.
-We evaluate the resulting allocation against the $\alpha$-fairness family of \citet{bft12} and find the policy ranking invariant to $\alpha$, but we do not solve the fairness-optimal program.
-The price of fairness of \citet{bft11}, and with it the position of our allocation on the efficiency-fairness frontier, is therefore still open, and characterizing it is the most immediate extension of this work.
+Equity enters our design procedurally, through the district decomposition, rather than as an optimized outcome.
+We evaluate the resulting allocation against the $\alpha$-fairness family and find the ranking invariant to $\alpha$, but we do not solve the fairness-optimal program; pricing that gap \citep{bft11} is the most immediate extension.
 
 % ============================ CONCLUSION ============================
 \section{Conclusion}
 \label{sec:conclusion}
 
 We have developed a robust, adjustable multi-echelon model for allocating antimicrobials across a national distribution network under uncertain demand, and shown that its tractable single-level reformulation scales to a country-sized problem while a district decomposition gives every district a dedicated allocation.
-Under the $\alpha$-fairness criterion the policy ranking is invariant to the equity weight, leaving the fairness-optimal allocation itself as the immediate next question.
+The policy ranking is invariant to the equity weight, leaving the fairness-optimal allocation as the immediate next question.
 On real procurement data from Botswana's Central Medical Stores, adaptive recourse delivers large reductions in unmet demand in every district, including the worst-served, for a modest procurement premium, and we characterized when adaptivity earns its cost and why the recommended policy is insensitive to the shortage penalty.
 The problem we study, a central agency distributing essential medicines over a heterogeneous network under demand it cannot fully observe, is common across import-dependent health systems, and the framework transfers wherever comparable facility, routing, and consumption data can be assembled.
 Its benefits are best understood as coverage gains: getting antimicrobials to the point of care more reliably, more evenly, and at acceptable cost.
