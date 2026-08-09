@@ -281,11 +281,9 @@ and arc-capacity, activation, and storage constraints,
 \label{eq:capacity}
 \end{equation}
 together with nonnegativity of $F, I, U, q$, integrality of $\lambda$, and $y \in \{0,1\}$, for all applicable $n, k, (i,j)$.
-Each period follows a fixed information timeline.
-At the start of period $t$ the agency observes the inventory $I_{n,k}^{(t)}$ and commits the procurement $q_k^{(t)}$ and the routing decisions $\lambda_{(i,j)}^{(t)}$ and $y_{(i,j)}^{(t)}$.
-Facilities then submit requisitions, which reveal the demand deviation for the period before vehicles are dispatched.
-Shipments leave against those requisitions, demand is served, and unmet demand and ending inventory are determined at the close of the period.
-The deterministic policy ignores the requisition signal and plans on nominal demand throughout; the adjustable policy of \Sec\ref{sec:adr} uses it, and we return to that distinction in \Sec\ref{sec:adr}.
+Each period runs on a fixed timeline.
+The agency observes $I_{n,k}^{(t)}$ and commits $q_k^{(t)}$, $\lambda_{(i,j)}^{(t)}$ and $y_{(i,j)}^{(t)}$; facility requisitions then reveal the period's demand deviation before dispatch; shipments leave, demand is served, and $U_{n,k}^{(t)}$ and $I_{n,k}^{(t+1)}$ follow.
+The deterministic and static robust policies ignore the requisition signal; the adjustable policy of \Sec\ref{sec:adr} uses it.
 This deterministic program is the benchmark against which we measure the value of hedging.
 
 % ============================ ROBUST FORMULATION ============================
@@ -307,12 +305,9 @@ We write demand as a nominal value plus a bounded deviation, $D_{n,k}^{(t)} = \b
 \end{equation}
 The bound $\sigma_{n,k}^{(t)}$ is the largest plausible deviation at node $n$, calibrated in \Sec\ref{sec:demand} from the demand model's variance.
 The budget $\Gamma$ caps how many nodes may simultaneously realize a worst-case deviation, and is the single knob trading conservatism against cost \citep{bertsim04}: $\Gamma = 0$ recovers the deterministic model, while large $\Gamma$ hedges against all nodes deviating at once.
-The budget also carries a probabilistic reading.
-For a constraint with $n$ uncertain coefficients, \citet{bertsim04} bound the probability of violation by $\exp(-\Gamma^{2}/2n)$.
-With the $43$ nodes of the Gaborone instance, the setting $\Gamma = 10$ used below corresponds to a bound of roughly $31\%$, and $\Gamma \approx 16$ would be required for $5\%$.
-Section~EC.4 reports performance across $\Gamma \in [1, 50]$, which spans this range.
-Demand drawn from the negative-binomial model of \Sec\ref{sec:demand} is unbounded and so falls outside $\mathcal{U}^{(k)}$ in most periods.
-The improvements we report should therefore be read as the effect of the protective stock positioning that the robust formulation induces, rather than as a coverage guarantee.
+\citet{bertsim04} bound the probability that a constraint with $n$ uncertain coefficients is violated by $\exp(-\Gamma^{2}/2n)$.
+Over the $43$ nodes of the Gaborone instance, $\Gamma = 10$ gives a bound near $31\%$ and $\Gamma \approx 16$ gives $5\%$; Section~EC.4 sweeps $\Gamma \in [1,50]$.
+Negative-binomial demand is unbounded, so realizations leave $\mathcal{U}^{(k)}$ in most periods, and the gains below come from the stock the robust formulation positions rather than from a coverage guarantee.
 
 \subsection{Static Robust Counterpart}
 \label{sec:static}
@@ -333,11 +328,9 @@ F_{(u,v),k}^{(t)}(\xi) = \bar F_{(u,v),k}^{(t)} + \alpha_{(u,v),k}^{(t)}\, \xi_{
 \label{eq:adr}
 \end{equation}
 Both $\bar F$ and $\alpha$ are chosen before any requisition arrives, and the executed shipment uses only the current period's requisition, so the policy never anticipates future periods.
-It is the best \emph{linear} response to the signal as a function of the uncertainty set, and it reduces to the static policy when $\alpha = 0$.
-The rule is deliberately restricted: a shipment responds only to the deviation at its own destination, in its own class, in the current period, rather than to the full history of observations.
-This keeps the reformulation of \Sec\ref{sec:reformulation} linear in the network size, at the cost of some adaptivity.
-Because a negative shipment has no physical meaning, we implement the truncation $F_{(u,v),k}^{(t)}(\xi) = \big(\bar F_{(u,v),k}^{(t)} + \alpha_{(u,v),k}^{(t)}\xi_{v,k}^{(t)}\big)^{+}$.
-The truncation is inactive in practice: it binds on $0.03\%$ of arc--class--periods and affects $0.004\%$ of shipped volume in the Gaborone instance.
+It is the best \emph{linear} response to the signal, and reduces to the static policy when $\alpha = 0$.
+The rule is restricted: a shipment responds only to its own destination, class, and period, which keeps the reformulation of \Sec\ref{sec:reformulation} linear in the network size.
+Since shipments cannot be negative we execute $\big(\bar F_{(u,v),k}^{(t)} + \alpha_{(u,v),k}^{(t)}\xi_{v,k}^{(t)}\big)^{+}$, a truncation that binds on $0.03\%$ of arc--class--periods.
 Substituting \eqref{eq:adr} into the inventory balance, availability, and capacity constraints and collecting the terms in $\xi$ turns each into a robust inequality of the form ``worst-case linear function of $\xi$ over $\mathcal{U}^{(k)}$ $\le$ slack,'' which is the object we dualize.
 
 \subsection{Tractable Single-Level Reformulation}
@@ -365,9 +358,8 @@ The next subsection makes the distributional choice explicit.
 \subsection{The Equity Criterion}
 \label{sec:equity}
 
-A cost-minimizing allocation treats a unit of unmet demand as equally costly wherever it occurs, so it is indifferent between spreading shortfalls evenly and concentrating them in a few districts.
-Whether that indifference is acceptable is a distributional question, and answering it requires stating what we mean by an equitable allocation.
-We do so here in the language of \citet{bft11} and \citet{bft12}.
+A cost-minimizing objective values a unit of unmet demand equally wherever it falls, so it is indifferent between spreading shortfalls and concentrating them.
+Whether that is acceptable is a distributional question, which we pose in the language of \citet{bft11} and \citet{bft12}.
 
 Let $\mathcal{D}$ index the districts, and let
 \begin{equation}
@@ -396,12 +388,9 @@ The cost of insisting on fairness is the price of fairness,
 \end{equation}
 the relative loss in total service from optimizing $W_\alpha$ rather than $W_0$ \citep{bft11}.
 
-Two things follow, and we are careful to separate them.
-First, the district decomposition is a \emph{procedural} equity mechanism rather than a solution to \eqref{eq:alphafair} for any $\alpha$.
-Because the subproblems are independent, no shipment may cross a district boundary, so by construction the decomposition rules out allocations that raise total service by moving supply from one district to another, whatever their relative demand density.
-It guarantees each district a dedicated allocation and dedicated transport, independent of its size.
-Second, this guarantee is not the same as optimizing an outcome criterion, and it comes at an efficiency cost that we do not measure: we do not solve the pooled national program, so we do not report $\mathrm{POF}$ for our instances.
-\Sec\ref{sec:cms-results} reports the service vector the decomposition induces, and \Sec\ref{sec:discussion} returns to what remains open.
+The district decomposition is a \emph{procedural} mechanism, not a solution to \eqref{eq:alphafair} for any $\alpha$.
+Independent subproblems forbid shipments across district boundaries, so by construction no allocation can raise total service by moving supply between districts; each district is guaranteed its own allocation and transport whatever its size.
+That guarantee is not an outcome criterion, and its efficiency cost is unmeasured: we do not solve the pooled program, so we report no $\mathrm{POF}$.
 \mynote{Solving the pooled instance and sweeping $\alpha$ over \eqref{eq:alphafair} would let us plot the efficiency-fairness frontier and place the decomposition on it. Deferred.}
 
 % ============================ DEMAND MODEL ============================
@@ -457,10 +446,8 @@ We report a Gaborone proof-of-concept, a national simulation, results driven by 
 \label{sec:gaborone}
 
 We first study penicillin distribution across the Gaborone district, comprising CMS, Princess Marina Hospital, and downstream clinics and health posts, with $\Gamma = 10$ and $\kappa = 10$.
-Each policy is evaluated over $R = 12$ independent demand realizations of $T = 100$ periods each, drawn from the fitted negative-binomial model and shared across policies so the comparison is paired.
-Averages are taken within a realization and standard errors across them.
-Periods within a realization turn out to be close to independent here, with lag-one autocorrelation between $-0.13$ and $-0.02$, so a standard error taken across the periods of one path is a reasonable estimate of the spread of that path's average; averaging over $R$ independent realizations reduces the standard error by a further factor of roughly $\sqrt{R}$.
-We report the latter because it is the uncertainty in the quantity the table and figure actually state.
+Each policy is evaluated over $R = 12$ independent demand realizations of $T = 100$ periods, drawn from the fitted negative-binomial model and shared across policies so the comparison is paired.
+Averages are taken within a realization and standard errors across them; the resulting standard errors are two orders of magnitude smaller than the gaps between policies, so $R$ is not a binding constraint on what we conclude.
 Cost parameters are illustrative ($h=0.1$, $\Delta=100$, $c=1$ per unit).
 The three policies diverge sharply.
 The deterministic policy leaves on average $12.8\%$ of demand unmet, with period-to-period shortfalls frequently above $20\%$.
@@ -536,13 +523,9 @@ The policy ordering is unchanged, and the coverage gains are if anything larger:
 The procurement premium of ARO-ADR over static robust is now 6.5\% and 6.4\%, materially larger than the 0.9\% under illustrative costs, because the premium is a cost ratio and CMS's actual prices differ from the convenience value $c=1$.
 We report both figures rather than the smaller illustrative one; the total objective remains lowest under ARO-ADR in both horizons, so the added procurement is more than repaid by avoided shortages.
 The geographic pattern (Figure~\ref{fig:cmsmap}) mirrors the simulation.
-In 2025--26 the deterministic policy leaves North East, Ghanzi, and Kgalagadi South at $29.6\%$, $27.2\%$, and $26.7\%$ unmet demand, while both robust policies, and ARO-ADR most of all, bring every district to a low level.
-Two things the map can be read as showing are worth separating.
-The improvement in level is large and reaches everywhere: the worst-served district improves from $29.6\%$ under the deterministic policy to $4.6\%$ under ARO-ADR, so no district is traded off against another.
-In the language of \Sec\ref{sec:equity}, the max-min service level $\min_d s_d$ rises from $0.704$ to $0.954$, so the criterion at $\alpha \to \infty$ improves substantially.
-Relative dispersion across districts, however, is largely unchanged.
-The coefficient of variation of district unmet demand is $0.16$ under ARO-ADR against $0.18$ under deterministic, and the Gini coefficient is $0.08$ against $0.10$.
-We therefore claim a uniform improvement in service level, not a reduction in relative inequality.
+In 2025--26 the deterministic policy leaves North East, Ghanzi and Kgalagadi South at $29.6\%$, $27.2\%$ and $26.7\%$ unmet, and ARO-ADR brings the worst-served district to $4.6\%$: in the terms of \Sec\ref{sec:equity}, $\min_d s_d$ rises from $0.704$ to $0.954$.
+Relative dispersion is unchanged, however, with a coefficient of variation across districts of $0.16$ under ARO-ADR against $0.18$ under deterministic and a Gini coefficient of $0.08$ against $0.10$.
+The gain is a uniform improvement in level, not a reduction in inequality.
 A disaggregated breakdown by cost component and district is given in Section~EC.4.
 
 \begin{table}[t]
@@ -603,10 +586,9 @@ As an extension, we make demand epidemiologically driven by coupling the allocat
 The two strains are drug-susceptible (DS), treated with first-line cephalosporins, and drug-resistant (DR), treated with second-line carbapenems.
 Treatment intensity is tied to realized supply: the DS and DR treatment rates scale with the delivered fractions of cephalosporins and carbapenems, saturating at their nominal levels.
 A stockout therefore suppresses treatment, prolonging infectiousness and feeding a resistance-amplification pathway in which imperfectly treated DS infections convert to DR.
-The coupling runs closed-loop, one period at a time.
-In each period we solve the allocation problem, observe how much cephalosporin and carbapenem actually reached the hospital, advance the compartmental system under that realized supply, and draw the next period's demand from the updated infectious population.
-A policy therefore faces the demand its own stockouts create, which is what we mean by saying that distribution failures and disease dynamics co-evolve.
-Note that the allocation models themselves do not anticipate this feedback: they optimize against the demand they are given, and the feedback enters through the environment rather than the objective.
+The coupling runs closed-loop, one period at a time: we solve the allocation, observe the cephalosporin and carbapenem that reached the hospital, advance the compartmental system under that supply, and draw the next period's demand from the updated infectious population.
+Each policy therefore faces the demand its own stockouts create.
+The allocation models do not anticipate this feedback; it enters through the environment rather than the objective.
 We present this as a proof-of-concept coupling rather than a validated epidemiological model; the full compartmental system and its calibration are in Section~EC.3.
 
 Over a two-year horizon the policy ordering is preserved: ARO-ADR holds average unmet demand near 0.1\%, against 3.5\% for static robust and 12.7\% for deterministic (Table~\ref{tab:epi}), with near-zero shortfalls even during epidemic demand spikes that push the deterministic policy above 25\%.
