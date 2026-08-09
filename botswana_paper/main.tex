@@ -148,7 +148,7 @@ This paper makes three contributions.
 Three findings are directly actionable for a medical-stores agency.
 The adaptive policy cuts average unmet demand by roughly three-quarters relative to current-practice deterministic planning, and it does so in \emph{every} district, including the worst-served, rather than trading rural for urban coverage.
 The value of adaptivity is largest in a specific and identifiable regime, high demand variability and a moderate uncertainty budget, which tells an agency when the added modeling effort pays off and when a simpler static policy suffices.
-Finally, because the clinical cost of an antimicrobial stockout far exceeds unit procurement cost, the operationally relevant regime is one in which realized service is limited by physical network capacity rather than by the shortage penalty, so the recommended policy is insensitive to the precise penalty an agency assigns.
+Finally, the clinical cost of an antimicrobial stockout exceeds unit procurement cost by orders of magnitude \citep{poudel2023}, so the operationally relevant regime is one in which realized service is limited by physical network capacity rather than by the shortage penalty, and the recommended policy is insensitive to the precise penalty an agency assigns.
 
 \paragraph{Related literature.}
 Our work sits at the intersection of three streams.
@@ -582,7 +582,9 @@ The response is governed by a threshold near the procurement cost.
 When $\Delta$ is at or below unit cost, serving demand is not cost-effective and unmet demand rises sharply.
 Once $\Delta$ rises well above it, beyond roughly $10$ here, realized unmet demand saturates and becomes essentially invariant to the penalty.
 Achievable service is then pinned by physical capacity and, for the robust policies, by the uncertainty set, neither of which depends on $\Delta$.
-Since the clinical cost of an antimicrobial stockout far exceeds unit procurement, the operationally relevant regime is exactly this saturated one, in which the policy ordering holds and the recommended policy is insensitive to the exact penalty an agency chooses.
+The operationally relevant regime is the saturated one.
+A stockout leaves an infection untreated or drives a switch to second-line therapy, and \citet{poudel2023} put the attributable cost of a resistant infection at US\$2{,}291 to US\$12{,}044 per case in upper-middle-income economies, Botswana's income group, against a unit procurement cost of a few currency units.
+The ratio is therefore far above the threshold of roughly ten identified here, so the policy ordering holds and the recommendation does not depend on the exact penalty an agency assigns.
 
 \subsection{Extension: Epidemic-Driven Demand}
 \label{sec:seir}
