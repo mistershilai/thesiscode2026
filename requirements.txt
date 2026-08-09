@@ -2,15 +2,20 @@
 # Pinned to the versions used to produce the published results.
 # gurobipy needs a Gurobi license (free academic licenses available); cvxpy
 # otherwise falls back to open-source solvers (HiGHS is used for the national run).
+# The web app has its own dependencies in app/backend/requirements.txt.
 
+certifi==2026.1.4
 cvxpy==1.8.0
+cycler==0.12.1
 folium==0.20.0
+geopandas==1.1.2
 geopy==2.4.1
 gurobipy==13.0.1
 ipykernel==7.1.0
 matplotlib==3.10.8
 networkx==3.6.1
 numpy==2.4.1
+openpyxl==3.1.5
 osmnx==2.0.7
 pandas==3.0.0
 pyarrow==23.0.1
@@ -19,5 +24,6 @@ python-dotenv==1.2.1
 requests==2.32.5
 scipy==1.17.0
 seaborn==0.13.2
+shapely==2.1.2
 statsmodels==0.14.6
 tqdm==4.67.2
