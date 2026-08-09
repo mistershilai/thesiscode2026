@@ -23,9 +23,10 @@ rather than cell index.
 | 3 | `fig:gaborone` | `unmetdemandaverage100gabs` | NP, sec. "Gaborone Simulation Results" |
 | 4 | `fig:gabcost` | `costbreakdown`, `costbenefit`, `objectivecomparison` | NP, sec. "Gaborone Simulation Results" |
 | 5 | `fig:heatmap` | `botswana_heatmap` | NP, sec. "National Results: Unmet Demand Heatmaps" |
-| 6 | `fig:cmsmap` | `cms_unmet_map` | NP, sec. "cms unmet demand heatmaps by policy and scenario" |
-| 7 | `fig:kappa` | `kappa` | NP, sec. "Sensitivity Analysis: Dispersion Mismatch (Kappa)" |
-| 8 | `fig:epi` | `epidemic_gaborone_results` | NP, sec. "epidemic simulation results" |
+| 6 | `fig:equity` | `equity_alpha` | NP, sec. "Equity: the alpha-fairness criterion of Section 4.5" |
+| 7 | `fig:cmsmap` | `cms_unmet_map` | NP, sec. "cms unmet demand heatmaps by policy and scenario" |
+| 8 | `fig:kappa` | `kappa` | NP, sec. "Sensitivity Analysis: Dispersion Mismatch (Kappa)" |
+| 9 | `fig:epi` | `epidemic_gaborone_results` | NP, sec. "epidemic simulation results" |
 
 ## Figures -- e-companion
 
@@ -36,8 +37,10 @@ rather than cell index.
 | EC.3 | `fig:gamma` | `gamma_sensitivity` | NP, sec. "Sensitivity Analysis: Uncertainty Budget (Gamma)" |
 | EC.4 | `fig:penalty` | `penalty_sensitivity` | NP, shortage-penalty sweep cell |
 | EC.5 | `fig:seasonal` | `seasonal_unmet_no_multiplier`, `seasonal_unmet_with_multiplier` | NP, secs. "Seasonal Demand Model" / "Seasonal Simulation Functions" |
-| EC.6 | `fig:cmsfull2526` / `fig:cmsfull2627` | `cms_full_metrics_2526`, `cms_full_metrics_2627` | NP, cell writing `cms_full_metrics_{scenario}` |
-| EC.7 | `fig:natmaps` | `botswana_appendix_simulation_maps` | NP, sec. "National Results: Multi-Metric Choropleth Maps" |
+| EC.6 | `fig:floor` | `equity_frontier` | NP, sec. "Equity: the efficiency-fairness frontier" (minimum-stock-cover sweep) |
+| EC.7 | `fig:cmsfull2526` | `cms_full_metrics_2526` | NP, cell writing `cms_full_metrics_{scenario}` |
+| EC.8 | `fig:cmsfull2627` | `cms_full_metrics_2627` | NP, cell writing `cms_full_metrics_{scenario}` |
+| EC.9 | `fig:natmaps` | `botswana_appendix_simulation_maps` | NP, sec. "National Results: Multi-Metric Choropleth Maps" |
 
 ## Raster exceptions
 

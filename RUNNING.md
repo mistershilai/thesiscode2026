@@ -168,9 +168,13 @@ from simcache import load_run
 frames = load_run("sweep_gamma", keys=["true_kappa", "Gamma", "policy"])
 ```
 
-Cached runs: `gaborone`, `sweep_kappa`, `sweep_gamma`, `sweep_penalty`,
-`seasonal`, `national`, `epidemic`. The CMS run keeps its own
-`cms_results_full.parquet` and is not touched by this mechanism.
+Cached runs, in the order the notebook writes them: `gaborone` (cell 44),
+`gaborone_replications` (48), `sweep_kappa` (55), `sweep_gamma` (58),
+`sweep_penalty` (61), `equity_frontier` (64), `seasonal_flat_replications` (69),
+`seasonal` and `seasonal_replications` (76), `national` (82), `epidemic` (103),
+`epidemic_closed_loop` (107). The CMS run keeps its own
+`cms_results_full.parquet` and is not touched by this mechanism; the
+district-level equity figure reads that parquet directly.
 
 Regenerate figures by re-running the producing notebook (see `EXHIBITS.md` for
 the figure -> notebook map), then copy them into the paper and audit:
