@@ -457,6 +457,7 @@ The adaptive gain is cheap: relative to static robust, ARO-ADR removes about 48\
 Figure~\ref{fig:gabcost} makes the economics explicit.
 Transport cost is broadly similar across policies, so the performance gap comes from inventory and shortage decisions rather than routing.
 In every period ARO-ADR avoids more shortage cost than it adds in procurement.
+The extra units it buys are not idle stock: over the horizon it procures $37{,}499$ more units than static robust and meets $37{,}341$ more units of demand, a conversion of $99.6\%$.
 The total objective under ARO-ADR is lowest, about 33\% below static robust and over 75\% below deterministic, since the shortage penalty dominates.
 
 \begin{figure}[htbp]
@@ -477,11 +478,15 @@ The total objective under ARO-ADR is lowest, about 33\% below static robust and 
         \caption{Net benefit of ARO-ADR over static robust.}
     \end{subfigure}
     \vspace{0.5em}
-    \begin{subfigure}[b]{0.6\textwidth}
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering\includegraphics[width=\textwidth]{figures/procurement_conversion}
+        \caption{Extra procurement against extra demand met.}
+    \end{subfigure}\hfill
+    \begin{subfigure}[b]{0.48\textwidth}
         \centering\includegraphics[width=\textwidth]{figures/objectivecomparison}
         \caption{Average total objective.}
     \end{subfigure}
-    \caption{Economics of adaptive recourse in the Gaborone proof-of-concept. Transport cost is similar across policies (a), ARO-ADR avoids more shortage cost than it adds in procurement in every period (b), and ARO-ADR attains the lowest total objective (c).}
+    \caption{Economics of adaptive recourse in the Gaborone proof-of-concept. Transport cost is similar across policies (a), ARO-ADR avoids more shortage cost than it adds in procurement in every period (b), the extra units it buys are matched almost exactly by the extra demand it meets (c), and it attains the lowest total objective (d).}
     \label{fig:gabcost}
 \end{figure}
 
