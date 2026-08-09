@@ -230,6 +230,19 @@ The check confirms the policy ordering is preserved under structured non-station
     \label{fig:seasonal}
 \end{figure}
 
+\paragraph{Minimum stock levels.}
+CMS writes stock policy as a minimum cover, so we add an elastic floor requiring every facility to end each period holding at least $\beta$ periods of its nominal demand, applied equally to every facility, and sweep $\beta$ (Figure~\ref{fig:floor}).
+Raising $\beta$ from $0$ to $2$ multiplies held inventory by $24.7$ while total cost falls slightly, because holding is cheap relative to the shortage penalty.
+It buys little: deterministic unmet demand falls by $0.65$ percentage points, against $6.89$ points from switching to ARO-ADR at $29\%$ of the cost.
+The stock rule an agency can write directly is dominated by the choice of planning model.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\linewidth]{figures/equity_frontier}
+    \caption{Elastic minimum stock cover $\beta$ swept across policies. \textbf{Left:} total cost over the horizon. \textbf{Right:} mean unmet demand. Movement along $\beta$ is small next to the gap between planning models.}
+    \label{fig:floor}
+\end{figure}
+
 \paragraph{Disaggregated cost maps.}
 Figures~\ref{fig:cmsfull2526} and~\ref{fig:cmsfull2627} decompose the real-CMS results of the main text (Section~6.3) by cost component and district, for the 2025--26 and 2026--27 scenarios.
 The higher objective under the deterministic policy is driven primarily by shortage cost rather than procurement or transport; procurement cost is broadly uniform across districts within each policy; and holding cost rises under the robust policies as they pre-position inventory to hedge, the mechanism through which they improve service.

@@ -391,8 +391,8 @@ the relative loss in total service from optimizing $W_\alpha$ rather than $W_0$ 
 
 The district decomposition is a \emph{procedural} mechanism, not a solution to \eqref{eq:alphafair} for any $\alpha$.
 Independent subproblems forbid shipments across district boundaries, so by construction no allocation can raise total service by moving supply between districts; each district is guaranteed its own allocation and transport whatever its size.
-That guarantee is not an outcome criterion, and its efficiency cost is unmeasured: we do not solve the pooled program, so we report no $\mathrm{POF}$.
-\mynote{Solving the pooled instance and sweeping $\alpha$ over \eqref{eq:alphafair} would let us plot the efficiency-fairness frontier and place the decomposition on it. Deferred.}
+That guarantee is not an outcome criterion, so we do not report a $\mathrm{POF}$, which compares fairness-optimal allocations.
+We instead evaluate the realized service vector against \eqref{eq:alphafair} in Figure~\ref{fig:equity}.
 
 % ============================ DEMAND MODEL ============================
 \section{The Medical Demand Estimator}
@@ -534,7 +534,17 @@ The geographic pattern (Figure~\ref{fig:cmsmap}) mirrors the simulation.
 In 2025--26 the deterministic policy leaves North East, Ghanzi and Kgalagadi South at $29.6\%$, $27.2\%$ and $26.7\%$ unmet, and ARO-ADR brings the worst-served district to $4.6\%$: in the terms of \Sec\ref{sec:equity}, $\min_d s_d$ rises from $0.704$ to $0.954$.
 Relative dispersion is unchanged, however, with a coefficient of variation across districts of $0.16$ under ARO-ADR against $0.18$ under deterministic and a Gini coefficient of $0.08$ against $0.10$.
 The gain is a uniform improvement in level, not a reduction in inequality.
+Figure~\ref{fig:equity} evaluates the allocation against the criterion of \Sec\ref{sec:equity}.
+The sorted service vectors are ordered rank by rank, by at least $2.3$ and $11.0$ percentage points, so every welfare function increasing in district service ranks the policies identically and the choice does not require committing to an $\alpha$.
+The margin widens with $\alpha$, from $18.4$ percentage points of equivalent service at $\alpha=0$ to $25.0$ under max-min, because the ARO-ADR service vector is nearly flat and the deterministic one is not.
 A disaggregated breakdown by cost component and district is given in Section~EC.4.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figures/equity_alpha}
+    \caption{District-level equity under the criterion of \Sec\ref{sec:equity}, 2025--26. \textbf{Left:} service level $s_d$ with districts ranked worst to best; the curves do not cross. \textbf{Right:} equally-distributed-equivalent service, the uniform level a planner with inequality aversion $\alpha$ would accept in place of $s$, equal to the mean at $\alpha=0$ and to the worst district as $\alpha \to \infty$.}
+    \label{fig:equity}
+\end{figure}
 
 \begin{table}[t]
 \centering
@@ -656,15 +666,15 @@ The results are simulation-based: we evaluate policies on real cost and consumpt
 The epidemic coupling is a proof of concept with parameters partly borrowed from the literature, and its resistance results should be read as coverage effects, not validated resistance forecasts.
 Finally, we take procurement prices and routing distances as fixed and known; supply-side uncertainty in lead times and prices, which we do not model, is a natural and important extension.
 Equity enters our design procedurally, through the district decomposition, rather than as a criterion optimized over outcomes.
-\Sec\ref{sec:equity} states the criterion we would optimize, the $\alpha$-fairness family of \citet{bft12}, and the efficiency loss we would report, the price of fairness of \citet{bft11}.
-We do neither here: we do not solve the pooled national program, so the position of our allocation on the efficiency-fairness frontier is unknown, and characterizing it is the most immediate extension of this work.
+We evaluate the resulting allocation against the $\alpha$-fairness family of \citet{bft12} and find the policy ranking invariant to $\alpha$, but we do not solve the fairness-optimal program.
+The price of fairness of \citet{bft11}, and with it the position of our allocation on the efficiency-fairness frontier, is therefore still open, and characterizing it is the most immediate extension of this work.
 
 % ============================ CONCLUSION ============================
 \section{Conclusion}
 \label{sec:conclusion}
 
 We have developed a robust, adjustable multi-echelon model for allocating antimicrobials across a national distribution network under uncertain demand, and shown that its tractable single-level reformulation scales to a country-sized problem while a district decomposition gives every district a dedicated allocation.
-We state the equity criterion this mechanism is and is not solving, and leave the position of our allocation on the efficiency-fairness frontier as the immediate next question.
+Under the $\alpha$-fairness criterion the policy ranking is invariant to the equity weight, leaving the fairness-optimal allocation itself as the immediate next question.
 On real procurement data from Botswana's Central Medical Stores, adaptive recourse delivers large reductions in unmet demand in every district, including the worst-served, for a modest procurement premium, and we characterized when adaptivity earns its cost and why the recommended policy is insensitive to the shortage penalty.
 The problem we study, a central agency distributing essential medicines over a heterogeneous network under demand it cannot fully observe, is common across import-dependent health systems, and the framework transfers wherever comparable facility, routing, and consumption data can be assembled.
 Its benefits are best understood as coverage gains: getting antimicrobials to the point of care more reliably, more evenly, and at acceptable cost.
