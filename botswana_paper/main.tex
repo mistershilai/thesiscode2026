@@ -446,8 +446,7 @@ We report a Gaborone proof-of-concept, a national simulation, results driven by 
 \label{sec:gaborone}
 
 We first study penicillin distribution across the Gaborone district, comprising CMS, Princess Marina Hospital, and downstream clinics and health posts, with $\Gamma = 10$ and $\kappa = 10$.
-Each policy is evaluated over $R = 12$ independent demand realizations of $T = 100$ periods, drawn from the fitted negative-binomial model and shared across policies so the comparison is paired.
-Averages are taken within a realization and standard errors across them; the resulting standard errors are two orders of magnitude smaller than the gaps between policies, so $R$ is not a binding constraint on what we conclude.
+Each policy is evaluated over $12$ independent demand realizations of $T = 100$ periods, drawn from the fitted negative-binomial model and shared across policies.
 Cost parameters are illustrative ($h=0.1$, $\Delta=100$, $c=1$ per unit).
 The three policies diverge sharply.
 The deterministic policy leaves on average $12.8\%$ of demand unmet, with period-to-period shortfalls frequently above $20\%$.
@@ -459,7 +458,7 @@ The cost breakdown shows transport cost broadly similar across policies, so the 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.72\textwidth]{figures/unmetdemandaverage100gabs}
-    \caption{Gaborone proof-of-concept: average unmet antimicrobial demand under the three policies. Each bar is the mean over $R = 12$ independent demand realizations of $T = 100$ periods, and the error bar is one standard error across those realizations. Adaptive recourse (ARO-ADR) achieves the lowest unmet demand.}
+    \caption{Gaborone proof-of-concept: average unmet antimicrobial demand under the three policies, with one standard error across the $12$ realizations. Adaptive recourse (ARO-ADR) achieves the lowest unmet demand.}
     \label{fig:gaborone}
 \end{figure}
 
