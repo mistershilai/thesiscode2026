@@ -40,6 +40,9 @@ RASTER_EXCEPTIONS = {
     "logistics_diagram",  # hand-drawn schematic
     "cmstopmh",           # screenshot of gabs_route.html
     "gabsmultiechelon",   # screenshot of gaborone_cms_pmh_clinics_routes.html
+    "app_dashboard",      # screenshot of the Kaelo decision-support app
+    "app_region",         # screenshot of the Kaelo decision-support app
+    "app_simulate",       # screenshot of the Kaelo decision-support app
     "seir",               # hand-drawn compartment diagram
     "modifiedseir",
     "betavariations",

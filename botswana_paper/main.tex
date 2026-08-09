@@ -650,6 +650,35 @@ Performance does depend on the dispersion $\kappa$ and the budget $\Gamma$: adap
 \paragraph{Deployability.}
 The framework is designed as decision support that an agency can drive with data it already holds or can assemble: a facility list with locations, a routing engine, catchment populations, and consumption records of the kind CMS provided.
 The tractable reformulation and district decomposition keep solve times within a replenishment cycle, and the model accepts richer demand inputs without structural change as data improve.
+Figure~\ref{fig:app} shows a working implementation: a planner selects a district, sets the dispersion and robustness budget, and solves all three policies against CMS scenario data.
+
+\begin{figure}[htbp]
+\centering
+\begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/app_dashboard}
+    \caption{National facility network}
+    \label{fig:app-dashboard}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/app_region}
+    \caption{District drill-down}
+    \label{fig:app-region}
+\end{subfigure}
+
+\vspace{1em}
+
+\begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/app_simulate}
+    \caption{Policy comparison for a selected district}
+    \label{fig:app-simulate}
+\end{subfigure}
+\caption{A decision-support implementation of the model. The planner moves from the national network (a) to a district (b), then sets $\kappa$, $\Gamma$, and the cost parameters and solves the three policies against a CMS scenario (c). The comparison shown is Greater Gaborone, 43 facilities, $\kappa=10$, $\Gamma=10$, over four biweekly periods; the policy ordering reproduces Section~\ref{sec:results}.}
+\label{fig:app}
+\end{figure}
 
 \paragraph{Limitations.}
 The demand estimator is calibrated to a single inpatient point-prevalence survey from one district, so the forecasts are best read as lower bounds on true facility need rather than complete demand; the optimization structure is unchanged by better inputs, but the numbers would move.
