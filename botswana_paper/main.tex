@@ -148,7 +148,7 @@ This paper makes three contributions.
 Three findings are directly actionable for a medical-stores agency.
 The adaptive policy cuts average unmet demand by roughly three-quarters relative to current-practice deterministic planning, and it does so in \emph{every} district, including the worst-served, rather than trading rural for urban coverage.
 The value of adaptivity is largest in a specific and identifiable regime, high demand variability and a moderate uncertainty budget, which tells an agency when the added modeling effort pays off and when a simpler static policy suffices.
-Finally, the clinical cost of an antimicrobial stockout exceeds unit procurement cost by orders of magnitude \citep{poudel2023}, so the operationally relevant regime is one in which realized service is limited by physical network capacity rather than by the shortage penalty, and the recommended policy is insensitive to the precise penalty an agency assigns.
+Finally, a stockout costs orders of magnitude more than a unit of procurement \citep{poudel2023}, so service is limited by network capacity rather than by the shortage penalty, and the recommendation is insensitive to that penalty.
 
 \paragraph{Related literature.}
 Our work sits at the intersection of three streams.
@@ -449,7 +449,7 @@ We report a Gaborone proof-of-concept, a national simulation, results driven by 
 We first study penicillin distribution across the Gaborone district, comprising CMS, Princess Marina Hospital, and downstream clinics and health posts, with $\Gamma = 10$ and $\kappa = 10$.
 Each policy is evaluated over $12$ independent demand realizations of $T = 100$ periods, drawn from the fitted negative-binomial model and shared across policies.
 Cost parameters are illustrative ($h=0.1$, $\Delta=100$, $c=1$ per unit).
-Section~EC.4 shows that realized service is unchanged for any $\Delta$ more than about ten times $c$, so what matters is that the ratio clears that threshold, not its exact value.
+Section~EC.4 shows realized service is unchanged for any $\Delta$ above roughly $10c$, so only the threshold matters.
 The three policies diverge sharply.
 The deterministic policy leaves on average $12.8\%$ of demand unmet, with period-to-period shortfalls frequently above $20\%$.
 Static robust cuts this to $3.3\%$ by pre-positioning stock against worst-case deviations, and ARO-ADR to $1.7\%$ (Figure~\ref{fig:gaborone}), an $86\%$ reduction relative to deterministic planning.
@@ -583,8 +583,8 @@ When $\Delta$ is at or below unit cost, serving demand is not cost-effective and
 Once $\Delta$ rises well above it, beyond roughly $10$ here, realized unmet demand saturates and becomes essentially invariant to the penalty.
 Achievable service is then pinned by physical capacity and, for the robust policies, by the uncertainty set, neither of which depends on $\Delta$.
 The operationally relevant regime is the saturated one.
-A stockout leaves an infection untreated or drives a switch to second-line therapy, and \citet{poudel2023} put the attributable cost of a resistant infection at US\$2{,}291 to US\$12{,}044 per case in upper-middle-income economies, Botswana's income group, against a unit procurement cost of a few currency units.
-The ratio is therefore far above the threshold of roughly ten identified here, so the policy ordering holds and the recommendation does not depend on the exact penalty an agency assigns.
+A stockout leaves an infection untreated or forces second-line therapy, at an attributable cost of US\$2{,}291 to US\$12{,}044 per case in upper-middle-income economies like Botswana \citep{poudel2023}.
+Against a unit cost of a few currency units, that is far above the threshold of ten, so the recommendation does not turn on the penalty chosen.
 
 \subsection{Extension: Epidemic-Driven Demand}
 \label{sec:seir}
