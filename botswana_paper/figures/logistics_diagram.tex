@@ -1,0 +1,70 @@
+% Vector redraw of the hand-made logistics schematic.
+% Compiles standalone to a cropped PDF, so the paper includes it as an image
+% and needs no tikz in its own preamble.
+%
+% Grayscale-safe: commodity flow and logistics reporting are distinguished by
+% LINE STYLE (solid vs dashed) and arrow tip, not by colour alone.
+\documentclass[11pt,border=2pt]{standalone}
+\usepackage{tikz}
+\usepackage{xcolor}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds,calc}
+
+\definecolor{commodity}{RGB}{150,40,30}
+\definecolor{report}{RGB}{40,80,150}
+
+\begin{document}
+\begin{tikzpicture}[
+  x=1cm,y=1cm,
+  font=\footnotesize,
+  every node/.style={align=center},
+  box/.style={draw,rectangle,minimum width=27mm,minimum height=12mm,inner sep=2pt},
+  blob/.style={draw,circle,minimum size=19mm,inner sep=1pt},
+  group/.style={draw,rectangle,inner sep=3mm},
+  flow/.style={draw=commodity,line width=0.7pt,solid,-{Stealth[length=2.2mm]}},
+  rep/.style={draw=report,line width=0.7pt,dash pattern=on 1.7pt off 1.3pt,
+              -{Triangle[open,length=2.4mm]}},
+]
+
+% ---- nodes (explicit coordinates keep the circles from colliding) --------
+\node[box]  (moh)     at (4.10,10.90) {Ministry of\\Health};
+\node[blob] (cms)     at (4.10, 8.40) {Central\\Medical\\Stores};
+\node[blob] (ref)     at (1.15, 5.35) {Referral\\Hospitals};
+
+\node[blob] (dhmt)    at (7.35, 6.45) {DHMT\\Warehouses};
+\node[blob] (cluster) at (10.45,6.45) {Cluster\\Clinics};
+\node[blob] (dph)     at (8.90, 4.65) {District/\\Primary\\Hospitals};
+
+\begin{scope}[on background layer]
+  \node[group,fit=(dhmt)(cluster)(dph)] (district) {};
+\end{scope}
+
+\node[box,minimum width=33mm] (clinics) at (8.90,2.20) {Clinics and\\Health Posts};
+
+% ---- flows ---------------------------------------------------------------
+% CMS reports upward to the ministry.
+\draw[rep]  (cms) -- (moh);
+
+% CMS <-> referral hospitals. Each direction bends left relative to its own
+% heading, so the pair separates symmetrically instead of overlapping.
+\draw[flow] (cms) to[bend left=9] (ref);
+\draw[rep]  (ref) to[bend left=9] (cms);
+
+% CMS <-> the district tier
+\draw[flow] (cms)      to[bend left=9] (district);
+\draw[rep]  (district) to[bend left=9] (cms);
+
+% district tier <-> clinics and health posts
+\draw[flow] ($(district.south)+(0.55,0)$) -- ($(clinics.north)+(0.55,0)$);
+\draw[rep]  ($(clinics.north)+(-0.55,0)$) -- ($(district.south)+(-0.55,0)$);
+
+% ---- legend --------------------------------------------------------------
+\node[draw,rectangle,inner sep=2.2mm,anchor=north west] (legend) at (0.05,2.95) {%
+  \begin{tikzpicture}[x=1cm,y=1cm,font=\footnotesize]
+    \draw[flow] (0,0.42) -- (0.80,0.42);
+    \node[anchor=west] at (0.92,0.42) {Commodity flow};
+    \draw[rep]  (0,0)    -- (0.80,0);
+    \node[anchor=west] at (0.92,0)    {Logistics report};
+  \end{tikzpicture}};
+
+\end{tikzpicture}
+\end{document}

@@ -37,7 +37,9 @@ TEX_FILES = ("main.tex", "ecompanion.tex")
 # Not plots -- vector conversion does not apply. These must instead be supplied
 # at >=300 dpi (INFORMS author portal, raster art).
 RASTER_EXCEPTIONS = {
-    "logistics_diagram",  # hand-drawn schematic
+    # logistics_diagram is no longer here: it was redrawn in TikZ and now builds
+    # to a vector PDF from figures/logistics_diagram.tex. The original hand-made
+    # JPG is kept alongside it as the only record of the source art.
     "cmstopmh",           # screenshot of gabs_route.html
     "gabsmultiechelon",   # screenshot of gaborone_cms_pmh_clinics_routes.html
     "app_dashboard",      # screenshot of the Kaelo decision-support app
