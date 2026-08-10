@@ -606,11 +606,12 @@ Each policy therefore faces the demand its own stockouts create.
 The allocation models do not anticipate this feedback; it enters through the environment rather than the objective.
 We present this as a proof-of-concept coupling rather than a validated epidemiological model; the full compartmental system and its calibration are in Section~EC.3.
 
-Over a two-year horizon the policy ordering is preserved: ARO-ADR holds average unmet demand at 0.4\%, against 3.7\% for static robust and 13.6\% for deterministic (Table~\ref{tab:epi}).
-At the epidemic peak its shortfall reaches 6.0\%, against 24.9\% for deterministic.
+Over two years the ordering is unchanged: ARO-ADR leaves 0.5\% of demand unmet on average, against 2.2\% for static robust and 10.4\% for deterministic (Table~\ref{tab:epi}).
+At the epidemic peak its shortfall is 7.6\%, against 25.1\% for deterministic.
+Because treatment depends on what arrives, ARO-ADR meets 99.9\% of the hospital's cephalosporin requirement against 93.6\% under deterministic planning, and ends the horizon with fewer infectious patients of both strains.
 The effect on resistance is more subtle.
-Better-supplied policies clear both strains faster, so they end with a lower \emph{absolute} resistant burden but a marginally higher resistant \emph{fraction}, because faster clearance of susceptible infections shrinks the denominator.
-Extending the compartmental model to a 50-year horizon (Section~EC.3) shows this gap is a small, persistent denominator effect that never reverses into greater resistance emergence.
+At two years ARO-ADR carries a lower \emph{absolute} resistant burden but a slightly higher resistant \emph{fraction}, because clearing susceptible infections faster shrinks the denominator.
+That gap closes within three years, and over a 50-year horizon (Section~EC.3) ARO-ADR holds both the lower fraction and the lower burden.
 The benefits are therefore best read as coverage gains rather than as changes to long-run resistance dynamics.
 
 \begin{table}[t]
@@ -621,9 +622,9 @@ The benefits are therefore best read as coverage gains rather than as changes to
 \toprule
 Policy & Avg.\ unmet (\%) & Avg.\ objective & Avg.\ procurement \\
 \midrule
-Deterministic & 13.61 & 35{,}878 & 2{,}053 \\
-Static robust &  3.67 & 11{,}811 & 2{,}305 \\
-ARO-ADR       &  0.43 &  3{,}859 & 2{,}380 \\
+Deterministic & 10.35 & 63{,}365 & 4{,}740 \\
+Static robust &  2.24 & 18{,}094 & 5{,}230 \\
+ARO-ADR       &  0.52 &  8{,}912 & 5{,}317 \\
 \bottomrule
 \end{tabular}
 \end{table}
