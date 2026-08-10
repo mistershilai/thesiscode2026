@@ -396,7 +396,7 @@ We state the estimator and its properties here and defer proofs to Section~EC.2 
 
 For region $r$ and age group $a$, let $N_{r,a}$ be the number of admissions, $\mu_{r,a}$ the incidence rate of infections requiring treatment, and $\delta_a$ the guideline dose (one shipment unit).
 The true regional demand is $D_r^{\star} = \sum_a N_{r,a}\,\mu_{r,a}\,\delta_a$.
-We observe survey counts $Y_{r,a,1},\dots,Y_{r,a,n}$, taken as independent draws from a negative-binomial law with mean $\mu_{r,a}$ and dispersion $\kappa>0$, and model the mean log-linearly, $\mu_{r,a} = \exp(x_{r,a}^{T}\beta)$, where $x_{r,a}$ collects region, age, facility-type, and infection-category indicators.
+We observe survey counts $Y_{r,a,1},\dots,Y_{r,a,n}$, taken as independent draws from a negative-binomial law with mean $\mu_{r,a}$ and dispersion $\kappa>0$, and model the mean log-linearly, $\mu_{r,a} = \exp(x_{r,a}^{T}\beta)$, where $x_{r,a}$ collects age, infection-category, facility-tier, and drug-class indicators; regional variation enters through the admissions $N_{r,a}$ rather than through $\beta$.
 The counts $Y_{r,a,1},\dots,Y_{r,a,n}$ are the $n$ patients sampled within a single cross-sectional PPS, not repeated surveys over time, so the large-sample regime below is in the number of sampled patients.
 
 The estimator plugs the negative-binomial maximum-likelihood fit $\hat\beta_n$ into the demand map: $\hat D_r = \sum_a N_{r,a}\,\delta_a\,\exp(x_{r,a}^{T}\hat\beta_n)$.
@@ -423,7 +423,9 @@ Under the NB2 parameterization, $\mathrm{Var}(Y) = \mu + \mu^2/\kappa$, so we ta
 \label{eq:sigma}
 \end{equation}
 the standard deviation of demand, as the radius of the uncertainty set \eqref{eq:uncertaintyset}.
-The single fitted PPS yields a large $\hat\kappa$ (near-Poisson variability); because this rests on one survey, we treat $\kappa$ as uncertain and report sensitivity across a range of values in \Sec\ref{sec:results}.
+Fitting the survey counts yields $\hat\kappa \approx 2$, and a method-of-moments estimate gives $\hat\kappa \approx 4$; both indicate substantial overdispersion.
+Because they rest on one survey, we treat $\kappa$ as uncertain and sweep it in \Sec\ref{sec:results}.
+The headline runs use $\kappa = 10$, a less variable regime than either estimate, and Figure~\ref{fig:kappa} shows the advantage of adaptivity grows as $\kappa$ falls, so this choice understates it.
 
 % ============================ NUMERICAL STUDY ============================
 \section{Numerical Study}
@@ -683,7 +685,7 @@ Figure~\ref{fig:app} shows a working implementation: a planner selects a distric
 \end{figure}
 
 \paragraph{Limitations.}
-The demand estimator is calibrated to a single inpatient point-prevalence survey from one district, so the forecasts are best read as lower bounds on true facility need rather than complete demand; the optimization structure is unchanged by better inputs, but the numbers would move.
+The demand estimator is calibrated to one cross-sectional inpatient point-prevalence survey of ten hospitals spanning the four facility tiers, so the forecasts are best read as lower bounds on true facility need rather than complete demand; the optimization structure is unchanged by better inputs, but the numbers would move.
 The results are simulation-based: we evaluate policies on real cost and consumption data, but no policy has been deployed, so we observe modeled rather than realized outcomes.
 The epidemic coupling is a proof of concept with parameters partly borrowed from the literature, and its resistance results should be read as coverage effects, not validated resistance forecasts.
 Finally, we take procurement prices and routing distances as fixed and known; supply-side uncertainty in lead times and prices, which we do not model, is a natural and important extension.
