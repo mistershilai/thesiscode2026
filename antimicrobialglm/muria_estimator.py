@@ -279,19 +279,22 @@ def fit_nb2(joint: pd.DataFrame, marg: dict):
     df["patients_ak"] = [pat.loc[a, k] for a, k in zip(df["agegroup"], df["infectionstatus"])]
     df["exposure"] = (df["patients_ak"] * df["hospital_type"].map(tier_share)).clip(lower=1e-8)
     df["log_exposure"] = np.log(df["exposure"])
-    df["count_int"] = np.round(df["count"]).astype(int)
 
     # pool rare classes for fit stability (same guard as the notebook)
-    tot = df.groupby("Class")["count_int"].sum()
+    tot = df.groupby("Class")["count"].sum()
     rare = tot[tot < 10].index.tolist()
     df["Class_model"] = df["Class"].where(~df["Class"].isin(rare), "Other")
 
     # fit on cells with genuine exposure support. HIV enters via the synthetic
     # construction's raking marginal (the "richer marginal"), not as a GLM term
     # here -- at n~895 with 15 age bands, adding it destabilizes the MLE.
+    # Round ONCE, after aggregating to the GLM's own cells. Rounding the HIV
+    # sub-cells first and summing them discarded 188 of 850 prescriptions and
+    # zeroed 184 cells, because most sub-cells sit below 0.5.
     fit = (df[df["exposure"] > 1e-6]
            .groupby(["agegroup", "infectionstatus", "hospital_type", "Class_model"], as_index=False)
-           .agg(count_int=("count_int", "sum"), log_exposure=("log_exposure", "mean")))
+           .agg(count=("count", "sum"), log_exposure=("log_exposure", "mean")))
+    fit["count_int"] = np.round(fit["count"]).astype(int)
     terms = "C(agegroup) + C(infectionstatus) + C(hospital_type) + C(Class_model)"
     res = smf.negativebinomial(f"count_int ~ {terms}", data=fit,
                                offset=fit["log_exposure"]).fit(method="nm", maxiter=5000, disp=False)
@@ -382,9 +385,10 @@ def export_artifacts(joint_fit, res, alpha, kappa, marg, rare):
             "kappa_note": ("kappa_hat is a BYPRODUCT of fitting NB to the smooth synthetic "
                            "joint and is NOT the demand overdispersion; the simulation does "
                            "not use it. Simulations sweep kappa (e.g. [2, 10, 25]). The "
-                           "empirical per-patient overdispersion from MURIA counts is "
-                           "approx kappa=3.7 (method of moments, Sec-1 self-report), which "
-                           "the swept range brackets.")}
+                           "empirical overdispersion over admitted patients is "
+                           "approx kappa=2.5 (method of moments; counting patients with no "
+                           "prescription, which is what makes it overdispersed -- conditioning "
+                           "on treated patients is underdispersed). The swept range brackets it.")}
     (OUT_DIR / "metadata.json").write_text(json.dumps(meta, indent=2))
 
 
