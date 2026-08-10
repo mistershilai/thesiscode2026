@@ -101,12 +101,12 @@ We formulate a multi-echelon, multi-period allocation model with static and adju
 The core methodological step is a dualization yielding a tractable single-level mixed-integer program that, with a district decomposition that gives every district a dedicated allocation, scales to 614 facilities across 18 districts.
 Demand comes from a Medical Demand Estimator calibrated to catchment populations and point-prevalence-survey data.
 On simulations driven by real Central Medical Stores procurement records, the adaptive policy reduces average unmet demand by 84--86\% relative to a deterministic baseline and 52--54\% relative to static robust optimization, at a procurement premium of 1.0\% under illustrative unit costs and 6.4--6.5\% under actual prices.
-A two-strain SEIR extension, in which treatment intensity depends on realized supply, preserves the policy ordering under epidemic-driven demand.
+A two-strain SEIR extension, in which treatment intensity depends on realized supply, preserves the policy ordering and leaves a lower resistant burden at every horizon.
 \noindent
 \textit{Managerial implications.}
 Adaptive recourse lifts service in every district, including the worst-served, for a modest procurement premium, and the value of adaptivity concentrates in an identifiable regime (high demand variability, moderate uncertainty budget), giving agencies a concrete calibration rule.
 Because clinical stockout costs dwarf unit procurement, realized service is pinned by physical capacity rather than the shortage penalty, so the recommended policy is insensitive to the exact penalty.
-The framework is a deployable decision-support tool whose benefits are best read as coverage gains.
+The framework is a deployable decision-support tool, and supply reliability acts on resistance as well as on coverage.
 \end{abstract}
 
 \bigskip
@@ -612,7 +612,7 @@ Because treatment depends on what arrives, ARO-ADR meets 99.9\% of the hospital'
 The effect on resistance is more subtle.
 At two years ARO-ADR carries a lower \emph{absolute} resistant burden but a slightly higher resistant \emph{fraction}, because clearing susceptible infections faster shrinks the denominator.
 That gap closes within three years, and over a 50-year horizon (Section~EC.3) ARO-ADR holds both the lower fraction and the lower burden.
-The benefits are therefore best read as coverage gains rather than as changes to long-run resistance dynamics.
+Supply reliability therefore acts on resistance as well as coverage, though the calibration is illustrative and we do not read the magnitudes as forecasts.
 
 \begin{table}[t]
 \centering
