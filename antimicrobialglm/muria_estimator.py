@@ -229,8 +229,8 @@ def build_synthetic_joint(marg: dict) -> pd.DataFrame:
             * hi.sum(1)[None, None, :, None, None] * hi.sum(0)[None, None, None, :, None])
     if USE_HIV:
         seed = seed * iv.sum(0)[None, None, None, None, :]
-    else:
-        seed = seed[..., None]
+    # No else: the seed is already 5-D with a trailing singleton HIV axis, so
+    # adding another one made the tensor 6-D and broke raking when USE_HIV=False.
     T = seed / seed.sum() * total
 
     axis_all = (0, 1, 2, 3, 4)
