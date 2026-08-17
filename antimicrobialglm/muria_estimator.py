@@ -7,15 +7,22 @@ hand-set "# data withheld" multipliers that stood in for it before.
 
 Pipeline (mirrors 4.5, real data replacing guesses):
   1. decode MURIA  -> patient table (Section 1) + prescription table (Section 2)
-  2. real marginals -> (age x infection) patient/prescription totals,
-                       (tier x class) prescription totals, HIV marginal
-  3. synthetic joint over (age, infection, tier, class[, HIV]) via IPF raked
-     to those REAL marginals  (the "calibrated synthetic microdata" of 4.5)
-  4. fit NB2 GLM  count ~ C(age)+C(infection)+C(tier)+C(class)[+C(HIV)]  with
+  2. real marginals -> (age x infection) patient totals, used for the exposure
+                       offset below
+  3. real joint over (age, infection, tier, class): every prescription already
+     carries all four fields on one record (age, tier, and class are observed
+     directly; infection is attached via a best-effort join to Section 1), so
+     no reconstruction is needed
+  4. fit NB2 GLM  count ~ C(age)+C(infection)+C(tier)+C(class)  with
      log-exposure offset; extract alpha_hat / kappa_hat
-  5. validate: compare the synthetic joint against the (best-effort) real
-     joint the model was NOT fully calibrated to
-  6. export artifacts (same schema as the notebook's artifacts/ folder)
+  5. export artifacts (same schema as the notebook's artifacts/ folder)
+
+  An earlier version reconstructed the (age, infection, tier, class) joint via
+  iterative proportional fitting (IPF / "raking") against 2-way marginals, on
+  the premise that the four fields were never observed together. That premise
+  does not hold here -- they are. Fitting on the real joint instead is both
+  simpler and far more stable: bootstrap kappa ranges [4.1, 8.5] against the
+  IPF reconstruction's [0.95, 6.6].
 
 The raw workbook is private MoH data (gitignored). Keep it local; never commit.
 
@@ -54,11 +61,6 @@ _AGE_BANDS = [(1, "<1"), (5, "1-5"), (10, "6 to 10 years"), (15, "11 to 15 years
               (50, "46 to 50 years"), (55, "51 to 55 years"), (60, "56 to 60 years"),
               (65, "61 to 65 years")]
 
-# Include HIV status as the one extra "richer" marginal (see report 4.5 / thesis
-# discussion). Set to False to recover the age/infection/tier/class-only model.
-USE_HIV = True
-HIV_LEVELS = ["Positive", "Negative", "Unknown"]
-
 # --------------------------------------------------------------------------
 # Decoding maps (validated: tier x class reproduces the published PPS table)
 # --------------------------------------------------------------------------
@@ -92,11 +94,6 @@ _INF_MAP = {"CA": "CAI", "HA": "HAI", "HBC": "HBCI"}
 def _infection(x) -> str:
     s = str(x).strip().upper()
     return "NIC" if s in ("", "NAN", "NONE") else _INF_MAP.get(s, "NIC")
-
-
-def _hiv(x) -> str:
-    s = str(x).strip().upper()
-    return {"P": "Positive", "N": "Negative"}.get(s, "Unknown")
 
 
 def _drug_class(atc, name) -> str | float:
@@ -148,7 +145,6 @@ def load_muria(path: Path = PPS_PATH):
         "tier": s1["HospitalCode"].map(_tier),
         "age_group": s1["Age"].map(_age_years).map(_age_group),
         "infection": s1[_col(s1, "Type of Infection")].map(_infection),
-        "hiv": s1[_col(s1, "HIV")].map(_hiv),
     })
 
     scripts = pd.DataFrame({
@@ -159,116 +155,53 @@ def load_muria(path: Path = PPS_PATH):
     })
     scripts = scripts.dropna(subset=["drug_class"]).reset_index(drop=True)
 
-    # attach patient infection + HIV to each prescription (best-effort link;
-    # patient codes are not globally unique -> keep first match per key)
-    link = patients.drop_duplicates("pkey").set_index("pkey")[["infection", "hiv"]]
+    # attach patient infection to each prescription (best-effort link; patient
+    # codes are not globally unique -> keep first match per key)
+    link = patients.drop_duplicates("pkey").set_index("pkey")[["infection"]]
     scripts = scripts.join(link, on="pkey")
     scripts["infection"] = scripts["infection"].fillna("NIC")
-    scripts["hiv"] = scripts["hiv"].fillna("Unknown")
     return patients, scripts
 
 
 # --------------------------------------------------------------------------
-# 2. Real marginals + real (approximate) joint
+# 2. Real joint + the marginal needed for the exposure offset
 # --------------------------------------------------------------------------
 def real_joint(scripts: pd.DataFrame) -> pd.DataFrame:
-    dims = ["age_group", "infection", "tier", "drug_class"] + (["hiv"] if USE_HIV else [])
-    return (scripts.dropna(subset=dims).groupby(dims).size()
-            .rename("count").reset_index())
+    """(age, infection, tier, class) cell counts, straight from the real
+    prescription records -- no reconstruction. This is what the GLM fits on."""
+    dims = ["age_group", "infection", "tier", "drug_class"]
+    j = (scripts.dropna(subset=dims).groupby(dims).size()
+         .rename("count").reset_index())
+    return j.rename(columns={"age_group": "agegroup", "infection": "infectionstatus",
+                             "tier": "hospital_type", "drug_class": "Class"})
 
 
 def real_marginals(patients: pd.DataFrame, scripts: pd.DataFrame) -> dict:
-    """The reliably-observed marginals the synthetic joint is raked to."""
+    """Marginals used only for the exposure offset in fit_nb2."""
     m = {}
     # (age x infection) prescriptions -> target_presc_ak (replaces age_mult/inf_mult)
     m["ak"] = (scripts.dropna(subset=["age_group", "infection"])
                .groupby(["age_group", "infection"]).size().rename("count").reset_index())
-    # (tier x class) prescriptions -> replaces the severity/eta synthetic allocation
+    # (tier x class) prescriptions -> tier_share in fit_nb2
     m["hi"] = (scripts.dropna(subset=["tier", "drug_class"])
                .groupby(["tier", "drug_class"]).size().rename("count").reset_index())
     # patients per (age x infection) -> exposure / intensity m_ak
     m["patients_ak"] = (patients.dropna(subset=["age_group", "infection"])
                         .groupby(["age_group", "infection"]).size().rename("patients").reset_index())
-    if USE_HIV:
-        m["hiv_class"] = (scripts.dropna(subset=["hiv", "drug_class"])
-                          .groupby(["hiv", "drug_class"]).size().rename("count").reset_index())
     return m
 
 
-# --------------------------------------------------------------------------
-# 3. Calibrated synthetic joint  (Report 4.5: IPF-raked to observed marginals)
-# --------------------------------------------------------------------------
 def _pivot(df, r, c, v):
     return df.pivot_table(index=r, columns=c, values=v, aggfunc="sum", fill_value=0.0)
 
 
-def build_synthetic_joint(marg: dict) -> pd.DataFrame:
-    """Reconstruct the (age, infection, tier, class[, hiv]) joint by raking an
-    independence seed to the REAL marginals via iterative proportional fitting.
-    This is the 4.5 'calibrated synthetic microdata' step, now data-driven."""
-    A, K, H, I = AGE_ORDER, INF_CATS, TIERS, CLASSES
-    V = HIV_LEVELS if USE_HIV else [None]
-    idx = {"a": {x: i for i, x in enumerate(A)}, "k": {x: i for i, x in enumerate(K)},
-           "h": {x: i for i, x in enumerate(H)}, "i": {x: i for i, x in enumerate(I)},
-           "v": {x: i for i, x in enumerate(V)}}
-
-    # target marginals as (writable) float arrays
-    ak = np.array(_pivot(marg["ak"], "age_group", "infection", "count").reindex(index=A, columns=K, fill_value=0.0).values, dtype=float)
-    hi = np.array(_pivot(marg["hi"], "tier", "drug_class", "count").reindex(index=H, columns=I, fill_value=0.0).values, dtype=float)
-    total = ak.sum()
-    hi *= total / hi.sum()
-    targets = [("ak", ak, (0, 1)), ("hi", hi, (2, 3))]
-    if USE_HIV:
-        # ordered (class, hiv) to match numpy's ascending kept-axis order (3, 4)
-        iv = np.array(_pivot(marg["hiv_class"], "drug_class", "hiv", "count").reindex(index=I, columns=V, fill_value=0.0).values, dtype=float)
-        iv *= total / iv.sum()
-        targets.append(("iv", iv, (3, 4)))
-
-    # independence seed from the marginals
-    seed = (ak.sum(1)[:, None, None, None, None] * ak.sum(0)[None, :, None, None, None]
-            * hi.sum(1)[None, None, :, None, None] * hi.sum(0)[None, None, None, :, None])
-    if USE_HIV:
-        seed = seed * iv.sum(0)[None, None, None, None, :]
-    # No else: the seed is already 5-D with a trailing singleton HIV axis, so
-    # adding another one made the tensor 6-D and broke raking when USE_HIV=False.
-    T = seed / seed.sum() * total
-
-    axis_all = (0, 1, 2, 3, 4)
-    for _ in range(1000):
-        prev = T.copy()
-        for _, tgt, ax in targets:
-            cur = T.sum(axis=tuple(a for a in axis_all if a not in ax))
-            with np.errstate(divide="ignore", invalid="ignore"):
-                ratio = np.divide(tgt, cur, out=np.ones_like(tgt), where=cur > 0)
-            # broadcast the marginal ratio back over the full 5-D tensor
-            expand = tuple(slice(None) if a in ax else None for a in range(5))
-            T = T * ratio[expand]
-        if np.max(np.abs(T - prev)) < 1e-9:
-            break
-
-    rows = []
-    for a in A:
-        for k in K:
-            for h in H:
-                for i in I:
-                    for v in V:
-                        c = T[idx["a"][a], idx["k"][k], idx["h"][h], idx["i"][i], idx["v"][v]]
-                        if c <= 0:
-                            continue
-                        row = {"agegroup": a, "infectionstatus": k, "hospital_type": h,
-                               "Class": i, "count": float(c)}
-                        if USE_HIV:
-                            row["hiv"] = v
-                        rows.append(row)
-    return pd.DataFrame(rows)
-
-
 # --------------------------------------------------------------------------
-# 4. NB2 GLM  (mean exp(X'beta), Var = mu + mu^2/kappa)
+# 3. NB2 GLM  (mean exp(X'beta), Var = mu + mu^2/kappa)
 # --------------------------------------------------------------------------
-def fit_nb2(joint: pd.DataFrame, marg: dict):
-    import statsmodels.formula.api as smf
-
+def _build_fit_table(joint: pd.DataFrame, marg: dict):
+    """Shared setup: exposure offset, rare-class pooling, one row per model
+    cell. Used by both fit_nb2 and check_dispersion_stability so the two
+    fit exactly the same table."""
     # exposure per (age, infection, tier) = patients(a,k) * prescription tier share
     pat = _pivot(marg["patients_ak"], "age_group", "infection", "patients")
     pat = pat.reindex(index=AGE_ORDER, columns=INF_CATS, fill_value=0.0)
@@ -285,56 +218,93 @@ def fit_nb2(joint: pd.DataFrame, marg: dict):
     rare = tot[tot < 10].index.tolist()
     df["Class_model"] = df["Class"].where(~df["Class"].isin(rare), "Other")
 
-    # fit on cells with genuine exposure support. HIV enters via the synthetic
-    # construction's raking marginal (the "richer marginal"), not as a GLM term
-    # here -- at n~895 with 15 age bands, adding it destabilizes the MLE.
-    # Round ONCE, after aggregating to the GLM's own cells. Rounding the HIV
-    # sub-cells first and summing them discarded 188 of 850 prescriptions and
-    # zeroed 184 cells, because most sub-cells sit below 0.5.
+    # Fit on cells with genuine exposure support. Round ONCE, after aggregating
+    # rare classes into "Other" -- rounding each original class before summing
+    # into the pooled bucket can discard real fractional mass.
     fit = (df[df["exposure"] > 1e-6]
            .groupby(["agegroup", "infectionstatus", "hospital_type", "Class_model"], as_index=False)
            .agg(count=("count", "sum"), log_exposure=("log_exposure", "mean")))
     fit["count_int"] = np.round(fit["count"]).astype(int)
+    return df, fit, rare
+
+
+def fit_nb2(joint: pd.DataFrame, marg: dict):
+    import statsmodels.formula.api as smf
+
+    df, fit, rare = _build_fit_table(joint, marg)
     terms = "C(agegroup) + C(infectionstatus) + C(hospital_type) + C(Class_model)"
     res = smf.negativebinomial(f"count_int ~ {terms}", data=fit,
                                offset=fit["log_exposure"]).fit(method="nm", maxiter=5000, disp=False)
-    # NOTE: kappa here is a byproduct of fitting NB to the synthetic joint, NOT the
-    # demand overdispersion. The simulation does not use it (it sweeps kappa). Real
-    # per-patient overdispersion from MURIA is approx kappa=3.7 (method of moments).
+    # NOTE: kappa here is a byproduct of the NB2 fit, NOT the demand
+    # overdispersion, and it is not even a STABLE byproduct -- see
+    # check_dispersion_stability, which refits this exact table under three
+    # optimizer configurations and finds kappa moving by a wide margin
+    # (6.68 -> 8.02 -> 10.87 on this data) while the mean structure mu_hat
+    # barely moves (0.98 correlation between the two most different fits).
+    # The simulation does not use kappa_hat; it sweeps kappa (e.g. [2, 10, 25]).
+    # Real per-patient overdispersion from MURIA is approx kappa=2.5
+    # (method of moments over admitted patients).
     alpha = float(res.params.get("alpha", 0.0))
     kappa = np.inf if alpha <= 1e-6 else 1.0 / alpha
     df["mu_hat"] = res.predict(df)
     return res, df, alpha, kappa, rare
 
 
-# --------------------------------------------------------------------------
-# 5. Validation: synthetic vs real (best-effort) joint
-# --------------------------------------------------------------------------
-def validate(real: pd.DataFrame, synth: pd.DataFrame) -> dict:
-    keys = ["agegroup", "infectionstatus", "hospital_type", "Class"]
-    r = real.rename(columns={"age_group": "agegroup", "infection": "infectionstatus",
-                             "tier": "hospital_type", "drug_class": "Class"})
-    r = r.groupby(keys)["count"].sum().rename("real")
-    s = synth.groupby(keys)["count"].sum().rename("synth")
-    m = pd.concat([r, s], axis=1).fillna(0.0)
-    m["real_p"] = m["real"] / m["real"].sum()
-    m["synth_p"] = m["synth"] / m["synth"].sum()
-    tvd = 0.5 * (m["real_p"] - m["synth_p"]).abs().sum()
-    # cosine similarity between the two joint vectors
-    cos = float((m["real_p"] * m["synth_p"]).sum() /
-                (np.linalg.norm(m["real_p"]) * np.linalg.norm(m["synth_p"]) + 1e-12))
-    # held-out 2-way (age x class): NOT a raking target -> a genuine check
-    ac_r = r.groupby(level=[0, 3]).sum(); ac_r /= ac_r.sum()
-    ac_s = s.groupby(level=[0, 3]).sum(); ac_s /= ac_s.sum()
-    ac = pd.concat([ac_r.rename("r"), ac_s.rename("s")], axis=1).fillna(0.0)
-    ac_tvd = 0.5 * (ac["r"] - ac["s"]).abs().sum()
-    return {"joint_TVD": tvd, "joint_cosine": cos, "age_x_class_TVD_heldout": ac_tvd}
+def check_dispersion_stability(joint: pd.DataFrame, marg: dict) -> dict:
+    """Verify (not just assert) that kappa_hat is not a trustworthy estimate of
+    anything, by refitting the same table under three optimizer configurations
+    and comparing both the dispersion parameter and the mean structure.
+
+    If kappa swings widely while mu_hat (what p_class/m_ak actually export)
+    stays close to constant across fits, that confirms the earlier finding:
+    the dispersion parameter is not identified by this sample at this cell
+    count, regardless of specification, but the demand estimate itself is on
+    much firmer ground. This function re-runs that check on whatever data is
+    passed in, so it is a live verification and not a one-time note.
+    """
+    import statsmodels.formula.api as smf
+
+    df, fit, rare = _build_fit_table(joint, marg)
+    terms = "C(agegroup) + C(infectionstatus) + C(hospital_type) + C(Class_model)"
+    configs = [("nm_5000", dict(method="nm", maxiter=5000)),
+               ("nm_30000", dict(method="nm", maxiter=30000)),
+               ("bfgs", dict(method="bfgs", maxiter=2000))]
+
+    kappas, mu_hats = {}, {}
+    for name, kw in configs:
+        try:
+            res = smf.negativebinomial(f"count_int ~ {terms}", data=fit,
+                                       offset=fit["log_exposure"]).fit(disp=False, **kw)
+            alpha = float(res.params.get("alpha", 0.0))
+            kappas[name] = None if alpha <= 1e-6 else 1.0 / alpha
+            mu_hats[name] = res.predict(df).values
+        except Exception as e:
+            kappas[name] = None
+            print(f"  stability check: {name} failed ({type(e).__name__})")
+
+    finite = [k for k in kappas.values() if k is not None and np.isfinite(k)]
+    names_with_mu = list(mu_hats.keys())
+    mu_corr = None
+    if len(names_with_mu) >= 2:
+        a, b = mu_hats[names_with_mu[0]], mu_hats[names_with_mu[-1]]
+        if a.std() > 0 and b.std() > 0:
+            mu_corr = float(np.corrcoef(a, b)[0, 1])
+
+    return {
+        "kappa_by_optimizer": {k: (None if v is None else round(float(v), 3)) for k, v in kappas.items()},
+        "kappa_range": [round(min(finite), 3), round(max(finite), 3)] if finite else None,
+        "mean_structure_correlation": mu_corr,
+        "conclusion": ("Dispersion (kappa) is not stably identified by this sample regardless of "
+                      "optimizer; the mean structure that p_class/m_ak actually export is far more "
+                      "stable. Do not report GLM kappa_hat as a demand-overdispersion estimate -- "
+                      "use the method-of-moments figure (~2.5) instead."),
+    }
 
 
 # --------------------------------------------------------------------------
-# 6. Export artifacts  (same schema as before; HIV marginalized out)
+# 4. Export artifacts (same schema as the notebook's artifacts/ folder)
 # --------------------------------------------------------------------------
-def export_artifacts(joint_fit, res, alpha, kappa, marg, rare):
+def export_artifacts(joint_fit, res, alpha, kappa, marg, rare, stability=None):
     import json
     OUT_DIR.mkdir(exist_ok=True)
     keys = ["agegroup", "infectionstatus", "hospital_type", "Class"]
@@ -371,24 +341,26 @@ def export_artifacts(joint_fit, res, alpha, kappa, marg, rare):
 
     j.groupby(["hospital_type", "Class"], as_index=False)["mu_hat"].sum().to_csv(
         OUT_DIR / "mu_hat_hospital_class.csv", index=False)
-    joint_fit.to_csv(OUT_DIR / "synthetic_joint_nb_input.csv", index=False)
+    joint_fit.to_csv(OUT_DIR / "nb_joint_input.csv", index=False)
     pd.DataFrame({"parameter": ["alpha_hat", "kappa_hat"], "value": [alpha, kappa]}).to_csv(
         OUT_DIR / "nb_params.csv", index=False)
     pd.DataFrame({"term": res.params.index, "estimate": res.params.values}).to_csv(
         OUT_DIR / "nb_coefficients.csv", index=False)
 
     meta = {"classes": CLASSES, "hospital_types": TIERS, "age_levels": AGE_ORDER,
-            "infection_levels": INF_CATS, "used_hiv": USE_HIV, "rare_classes_pooled": rare,
+            "infection_levels": INF_CATS, "rare_classes_pooled": rare,
             "alpha_hat": alpha, "kappa_hat": None if np.isinf(kappa) else kappa,
-            "source": "MURIA PPS (private); calibrated synthetic microdata per Report 4.5",
+            "source": "MURIA PPS (private); fitted on the real per-record joint, Report 4.5 estimator structure",
             "nb2_variance": "Var = mu + alpha*mu^2 = mu + mu^2/kappa",
-            "kappa_note": ("kappa_hat is a BYPRODUCT of fitting NB to the smooth synthetic "
-                           "joint and is NOT the demand overdispersion; the simulation does "
-                           "not use it. Simulations sweep kappa (e.g. [2, 10, 25]). The "
-                           "empirical overdispersion over admitted patients is "
-                           "approx kappa=2.5 (method of moments; counting patients with no "
-                           "prescription, which is what makes it overdispersed -- conditioning "
-                           "on treated patients is underdispersed). The swept range brackets it.")}
+            "kappa_note": ("kappa_hat is a BYPRODUCT of the NB2 fit and is NOT the demand "
+                           "overdispersion; the simulation does not use it (it sweeps kappa, "
+                           "e.g. [2, 10, 25]). The empirical overdispersion over admitted "
+                           "patients is approx kappa=2.5 (method of moments; counting patients "
+                           "with no prescription, which is what makes it overdispersed -- "
+                           "conditioning on treated patients is underdispersed). The swept "
+                           "range brackets it.")}
+    if stability is not None:
+        meta["dispersion_stability_check"] = stability
     (OUT_DIR / "metadata.json").write_text(json.dumps(meta, indent=2))
 
 
@@ -396,14 +368,19 @@ def main():
     patients, scripts = load_muria()
     print(f"patients={len(patients)}  prescriptions(classified)={len(scripts)}")
     marg = real_marginals(patients, scripts)
-    synth = build_synthetic_joint(marg)
-    print(f"synthetic joint: {len(synth)} cells, sum={synth['count'].sum():.0f}")
-    res, joint_fit, alpha, kappa, rare = fit_nb2(synth, marg)
+    joint = real_joint(scripts)
+    full_grid = len(AGE_ORDER) * len(INF_CATS) * len(TIERS) * len(CLASSES)
+    print(f"real joint: {len(joint)} occupied cells of {full_grid} possible "
+          f"({100*len(joint)/full_grid:.0f}%), {int(joint['count'].sum())} prescriptions")
+    res, joint_fit, alpha, kappa, rare = fit_nb2(joint, marg)
     print(f"alpha_hat={alpha:.4f}  kappa_hat={kappa:.4f}  rare_pooled={rare}")
-    metrics = validate(real_joint(scripts), synth)
-    print("validation (synthetic vs real joint):",
-          {k: round(v, 4) for k, v in metrics.items()})
-    export_artifacts(joint_fit, res, alpha, kappa, marg, rare)
+
+    print("checking dispersion stability across optimizers...")
+    stability = check_dispersion_stability(joint, marg)
+    print(f"  kappa by optimizer: {stability['kappa_by_optimizer']}")
+    print(f"  mean-structure correlation: {stability['mean_structure_correlation']}")
+
+    export_artifacts(joint_fit, res, alpha, kappa, marg, rare, stability)
     print(f"artifacts written to {OUT_DIR}")
 
 

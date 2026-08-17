@@ -129,6 +129,14 @@ By linearity of expectation, $\mathbb{E}[D_i] = \sum_{j=1}^{N}\mathbb{E}[Y_{j,i}
 For the covariance, $\mathrm{Cov}(D_i,D_{i'}) = \sum_{j}\sum_{\ell}\mathrm{Cov}(Y_{j,i},Y_{\ell,i'})$; independence across patients kills the $j\neq\ell$ terms, leaving $\sum_j \mathrm{Cov}(Y_{j,i},Y_{j,i'}) = N\,\mathrm{Cov}(Y_{1,i},Y_{1,i'})$, which is unrestricted.
 Thus aggregation preserves marginal means while permitting arbitrary within-patient dependence across classes. \hfill$\blacksquare$
 
+\paragraph{The fitted dispersion is not stable, and we do not use it.}
+\label{ec:kappa-stability}
+Proposition~2 (consistency) concerns $\hat\beta_n$ and the resulting mean map $\hat D_r$, not the negative-binomial dispersion parameter $\hat\kappa$, which the same fit returns as a byproduct.
+We verified that this byproduct is not trustworthy: refitting the identical survey table under three optimizer configurations (Nelder--Mead at 5{,}000 and 30{,}000 iterations, then BFGS) moves $\hat\kappa$ from $6.68$ to $8.02$ to $10.87$, with no change to the data or specification.
+The mean structure is unaffected: the fitted demand $\hat D_r$ correlates at $0.98$ between the two most different fits.
+So the dispersion parameter is not identified by this sample at this cell count, regardless of specification, while the demand estimate the model is built to produce is stable.
+This is why Section~5 reports $\kappa$ from the method of moments rather than from the GLM, and it is checked automatically on every re-fit of the estimator, not asserted once.
+
 % ======================= EC.3 EPIDEMIC MODEL =======================
 \section{The Epidemic Coupling}
 \label{ec:seir}
