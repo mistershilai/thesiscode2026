@@ -116,25 +116,36 @@ the simulations treat kappa as a swept sensitivity parameter, not a pinned value
 Notebook: `national_pipeline/national_pipeline.ipynb`
 
 - Reads: canonical population, `facilities_with_warehouses.csv`, `data/processed/{distance_matrix_named,duration_matrix_named}.csv`, `botswana_population_age_breakdown.csv`, `district_admissions_estimates_2021.csv`, `antimicrobialglm/artifacts/*`, `national_pipeline/{antimicrobials.csv,botswana.geojson}`
-- Writes: `{region}_population_nearest_facilities*.csv`, `cms_results.parquet`, figures/maps
+- Writes: `{region}_population_nearest_facilities*.csv`, `outputs/results/budget/*.parquet`, figures/maps
 
 Runs nearest-facility assignment, multi-echelon network construction, node-level
 demand, the nominal / static-robust / adjustable-robust (ARO-ADR) optimization
-models, CMS-based demand simulation (2025-26 and 2026-27), SEIR epidemic coupling,
-and resistance analysis. The national simulation sweeps are the slow part (hours;
-scales with region count x Monte-Carlo draws).
+models, SEIR epidemic coupling, and resistance analysis. The national simulation
+sweeps are the slow part (hours; scales with region count x Monte-Carlo draws).
 
-### 5b. Batch / cluster (SLURM)  `[SLOW]`
+Every run uses the budget model: each policy minimizes unmet demand first, subject
+to a per-period cap on transport + procurement spend, `B = BUDGET_FACTOR * B_ref`,
+where `B_ref` is the spend that serves the period's forecast in full. Both
+`BUDGET_FACTOR` (notebook budget-settings cell, and the top of `run_cms_two.py`)
+must match. The CMS-data run is not solved in the notebook; it reads the output of
+5b, so run 5b before the CMS cells.
 
-Script: `national_pipeline/run_cms_two.py` — batch twin of the CMS national run,
-sharing the same models as the notebook. Submitted via `national_pipeline/submit.sh`
-on a SLURM cluster (`--time=7-00:00:00`); writes checkpoint + final parquet to
-`national_pipeline/results/`. Use for the full national sweep that is too slow to
-run interactively.
+### 5b. CMS-data national run  `[SLOW]`
+
+Script: `national_pipeline/run_cms_two.py` — the CMS-data run (2025-26, then
+2026-27 from year 1's final inventory) for every DHMT, sharing the CMS budget
+solvers with the notebook. Runs `MAX_WORKERS` (3) regions at a time on the local
+machine, checkpoints after every region, and resumes from the checkpoint when
+re-run. Writes `outputs/results/budget/cms_results.parquet`, which the notebook's
+CMS cells read.
 
 ```bash
-sbatch national_pipeline/submit.sh   # from the cluster checkout
+cd national_pipeline
+python run_cms_two.py                          # every DHMT
+python run_cms_two.py --regions Chobe Ghanzi   # a subset
 ```
+
+`submit.sh` is the old SLURM wrapper and is no longer needed.
 
 ---
 
@@ -160,21 +171,24 @@ Two conventions keep figures consistent with the typeset page:
   in-figure title duplicates it in a different font. Row/column parameter labels
   on grid figures are kept - those are labels, not titles.
 
-Every simulation caches its per-period metrics to `outputs/results/*.parquet`
-through `simcache.py`, so a figure can be restyled without re-solving:
+Every simulation caches its per-period metrics through `simcache.py`, so a figure
+can be restyled without re-solving. Budget-model runs go to
+`outputs/results/budget/` (the notebook's budget-settings cell redirects
+`simcache.RESULTS_DIR`); the older shortage-penalty caches stay in
+`outputs/results/` and are no longer read:
 
 ```python
 from simcache import load_run
 frames = load_run("sweep_gamma", keys=["true_kappa", "Gamma", "policy"])
 ```
 
-Cached runs, in the order the notebook writes them: `gaborone` (cell 44),
-`gaborone_replications` (48), `sweep_kappa` (55), `sweep_gamma` (58),
-`sweep_penalty` (61), `equity_frontier` (64), `seasonal_flat_replications` (69),
-`seasonal` and `seasonal_replications` (76), `national` (82), `epidemic` (103),
-`epidemic_closed_loop` (107). The CMS run keeps its own
-`cms_results_full.parquet` and is not touched by this mechanism; the
-district-level equity figure reads that parquet directly.
+Cached runs, in the order the notebook writes them: `gaborone`,
+`gaborone_martingale_{pure_martingale,mean_reverting}`, `gaborone_replications`,
+`sweep_kappa`, `sweep_gamma`, `sweep_budget`, `equity_frontier`,
+`seasonal_flat_replications`, `seasonal` and `seasonal_replications`, `national`,
+`epidemic`, `epidemic_closed_loop`. The CMS run writes `cms_results.parquet` to the
+same directory from `run_cms_two.py`; the CMS maps and the district-level equity
+figure read it.
 
 Regenerate figures by re-running the producing notebook (see `EXHIBITS.md` for
 the figure -> notebook map), then copy them into the paper and audit:

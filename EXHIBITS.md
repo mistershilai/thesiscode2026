@@ -26,16 +26,15 @@ rather than cell index.
 | 6 | `fig:equity` | `equity_alpha` | NP, sec. "Equity: the alpha-fairness criterion of Section 4.5" |
 | 7 | `fig:cmsmap` | `cms_unmet_map` | NP, sec. "cms unmet demand heatmaps by policy and scenario" |
 | 8 | `fig:kappa` | `kappa` | NP, sec. "Sensitivity Analysis: Dispersion Mismatch (Kappa)" |
-| 9 | `fig:epi` | `epidemic_gaborone_results` | NP, sec. "epidemic simulation results" |
 
 ## Figures -- e-companion
 
 | # | Label | Graphic(s) | Produced by |
 |---|-------|-----------|-------------|
-| EC.1 | `fig:resistance` | `resistance_emergence_comparison` | NP, sec. "epidemic simulation results" |
-| EC.2 | `fig:seirlong` | `seir_resistance_longhorizon` | NP, long-horizon SEIR extension cell |
+| EC.1 | `fig:epi` | `epidemic_gaborone_results` | NP, sec. "epidemic simulation results" (moved from the main text) |
+| EC.2 | `fig:resistance` | `resistance_emergence_comparison` | NP, sec. "epidemic simulation results" |
 | EC.3 | `fig:gamma` | `gamma_sensitivity` | NP, sec. "Sensitivity Analysis: Uncertainty Budget (Gamma)" |
-| EC.4 | `fig:penalty` | `penalty_sensitivity` | NP, shortage-penalty sweep cell |
+| EC.4 | `fig:budget` | `budget_sensitivity` | NP, budget-factor sweep cell (replaces the shortage-penalty sweep) |
 | EC.5 | `fig:seasonal` | `seasonal_unmet_no_multiplier`, `seasonal_unmet_with_multiplier` | NP, secs. "Seasonal Demand Model" / "Seasonal Simulation Functions" |
 | EC.6 | `fig:floor` | `equity_frontier` | NP, sec. "Equity: the efficiency-fairness frontier" (minimum-stock-cover sweep) |
 | EC.7 | `fig:cmsfull2526` | `cms_full_metrics_2526` | NP, cell writing `cms_full_metrics_{scenario}` |
@@ -58,14 +57,14 @@ reports them separately rather than flagging them as unconverted plots.
 
 | # | Label | Content | Produced by |
 |---|-------|---------|-------------|
-| 1 | `tab:national_results` | Avg. per-period performance, all 18 districts | NP, national results section; from `cms_results_full.parquet` |
-| 2 | `tab:cms_results` | Avg. unmet demand / procurement cost / objective by model | NP, CMS results section; from `cms_results_full.parquet` |
-| 3 | `tab:seir_params` | SEIR parameters for the PMH case study | NP, epidemic/SEIR setup (input parameters) |
-| 4 | `tab:epi_results` | Policy performance under epidemic-driven demand at PMH | NP, sec. "epidemic simulation results" |
+| 1 | `tab:national_results` | Avg. per-period performance, all 18 districts | NP, national results section; from `outputs/results/budget/cms_results.parquet` |
+| 2 | `tab:cms_results` | Avg. unmet demand / procurement cost / objective by model | NP, CMS results section; from `outputs/results/budget/cms_results.parquet` |
+| EC.1 | `tab:seir-params` | SEIR parameters for the PMH case study | NP, epidemic/SEIR setup (input parameters) |
+| EC.2 | `tab:epi` | Policy performance under epidemic-driven demand at PMH (moved to the e-companion) | NP, sec. "epidemic simulation results" |
 
 ## Data provenance (upstream of the exhibits)
 
-- **`cms_results_full.parquet`** (national CMS run; Figures 5-6, EC.6-EC.7 and
+- **`outputs/results/budget/cms_results.parquet`** (national CMS run, from `run_cms_two.py`; Figures 5-6, EC.6-EC.7 and
   Tables 1-2): produced by the national simulation. Regenerate via
   `national_pipeline.ipynb`, or in batch via `run_cms_two.py` /
   `run_missing_regions.py` (HiGHS solver). 18 DHMTs x 3 policies (deterministic,

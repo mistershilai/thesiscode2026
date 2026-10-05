@@ -1,18 +1,28 @@
 """
-run_cms_two.py  -  CMS simulation pipeline for Princeton Research Computing
-Runs the 2025-26 / 2026-27 CMS simulation across all Botswana DHMTs.
-Uses ProcessPoolExecutor to run regions in parallel (one worker per region,
-capped by MAX_WORKERS to stay within 32 GB memory).
+run_cms_two.py  -  CMS-data simulation across all Botswana DHMTs (budget model)
+Runs 2025-26, then 2026-27 from year 1's final inventory, for every DHMT and all
+three policies. Every policy minimizes unmet demand first, subject to the
+per-period budget B = BUDGET_FACTOR * B_ref, where B_ref is the spend that serves
+the period's forecast in full (see forecast_period_cost_cms). This is the batch
+twin of the CMS cells in national_pipeline.ipynb; keep the solvers in sync.
 
-Usage:
-    python run_cms.py
+Uses ProcessPoolExecutor to run regions in parallel (MAX_WORKERS at a time).
+Checkpoints after every region and, when re-run, skips the regions already in
+the checkpoint.
 
-Output:
-    results/cms_results_two.parquet   - main metrics (all regions × models × years)
-    results/cms_failures_two.csv      - any regions that errored
+Usage (from national_pipeline/):
+    python run_cms_two.py                          # every DHMT
+    python run_cms_two.py --regions Chobe Ghanzi   # a subset
+    python run_cms_two.py --T 2 --regions Chobe    # smoke test (2 periods)
+
+Output (outputs/results/budget/, read by the notebook):
+    cms_results.parquet           - all regions x models x years
+    cms_results_partial.parquet   - checkpoint, rewritten after every region
+    cms_failures.csv              - any regions that errored
 """
 
 # Imports
+import argparse
 import os
 import re
 import sys
@@ -28,12 +38,11 @@ from scipy.spatial import cKDTree
 # Paths - adjust if project layout differs
 BASE_DIR   = Path(__file__).parent                   # directory of this script
 DATA_DIR   = BASE_DIR / ".."                         # parent dir has most data
-OUT_DIR    = BASE_DIR / "results"
-OUT_DIR.mkdir(exist_ok=True)
+OUT_DIR    = DATA_DIR / "outputs" / "results" / "budget"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Parallelism
-# Keep peak memory ≤ 32 GB.  Each ARO-ADR solve can spike several GB.
-# Start at 4; tune up after checking `seff <jobid>`.
+# Regions solved at once. Each ARO-ADR solve can spike several GB of memory.
 MAX_WORKERS = 3
 SOLVER = cp.HIGHS   # HiGHS (open-source LP solver); MOSEK breaks on this problem
 
@@ -49,7 +58,7 @@ spec.loader.exec_module(antimicrobialglm_utils)
 estimate_antimicrobial_demand = antimicrobialglm_utils.estimate_antimicrobial_demand
 
 
-# Data loading (runs once in the main process; workers inherit via fork)
+# Data loading (main process, and once per worker via the pool initializer)
 
 def load_data():
     """Load all static data into module-level globals."""
@@ -268,6 +277,52 @@ def make_nb_draws_from_mean(mean_mat: pd.DataFrame, kappa: float, T: int, seed: 
     kappa = max(kappa, 1e-6)
     p     = kappa / (kappa + mu)
     return rng.negative_binomial(n=kappa, p=p, size=(T, *mu.shape)).astype(float)
+
+def make_nb_draws_martingale(mean_mat: pd.DataFrame, kappa: float, T: int, seed: int = 0,
+                              sigma: float = 0.12, theta: float = 0.0, share_common: float = 0.6):
+    """NB draws whose mean is modulated by a serially-correlated log-intensity
+    factor instead of held fixed each period (a doubly-stochastic / Cox
+    process), so demand can drift for several periods instead of resetting
+    independently each draw. theta=0 is a discrete Doleans-Dade exponential
+    martingale (E[M_t]=1 at every t); theta>0 is AR(1)-in-logs mean reversion
+    with half-life ~ln(2)/theta periods, still E[M_t]=1 via the stationary
+    drift correction. Ported from Stefan Clarke's exponential_factor()
+    (botswanacode:code/generic/scripts/create_demand_data_EM.py).
+
+    Same (mean_mat, kappa, T, seed) signature as make_nb_draws_from_mean, so
+    this is a drop-in swap wherever that function is called.
+    """
+    rng = np.random.default_rng(seed)
+    mu  = mean_mat.values.astype(float)
+    n_classes = mu.shape[-1]
+    kappa = max(kappa, 1e-6)
+
+    sigma_common = sigma * np.sqrt(share_common)
+    sigma_class  = sigma * np.sqrt(1.0 - share_common)
+
+    def exponential_factor(s, shape):
+        if s <= 0:
+            return np.ones((T, *shape))
+        z = rng.standard_normal((T, *shape))
+        if theta <= 0.0:
+            x = np.cumsum(s * z - 0.5 * s ** 2, axis=0)
+        else:
+            phi = 1.0 - theta
+            stat_var  = s ** 2 / (1.0 - phi ** 2)
+            stat_mean = -stat_var / 2.0
+            x = np.empty((T, *shape))
+            x[0] = stat_mean + np.sqrt(stat_var) * z[0]
+            a = -s ** 2 / (2.0 * (1.0 + phi))
+            for t in range(1, T):
+                x[t] = phi * x[t - 1] + s * z[t] + a
+        return np.exp(x)
+
+    m_common = exponential_factor(sigma_common, mu.shape[:-1])           # (T, *node_shape)
+    m_class  = exponential_factor(sigma_class, (*mu.shape[:-1], n_classes))  # (T, *node_shape, K)
+
+    lam = mu[None, ...] * m_common[..., None] * m_class
+    p   = kappa / (kappa + lam)
+    return rng.negative_binomial(n=kappa, p=p, size=lam.shape).astype(float)
 
 def build_node_demand_matrix(demand_fac_long):
     tmp = demand_fac_long.copy()
@@ -1111,55 +1166,685 @@ def simulate_aro_adr_under_draws_cms(
 
 # Region worker (runs in a subprocess)
 
+# Budget-constrained CMS solvers (twins of the three above; same as the
+# notebook's CMS budget cells)
+
+def simulate_aro_adr_budget_under_draws_cms(
+    T, CMS, nodes, arcs, arc_df, classes, dist_km, mu_mat, demand_draws, sigma_mat, Gamma,
+    unmet_priority=1e4, budget_cap=None, total_budget=None, period_budget_caps=None,
+    alpha_lb=-np.inf, alpha_ub=np.inf,
+    transport_cost_per_km=0.5,
+    holding_cost_per_unit=0.1, procurement_cost_per_unit=0.1,
+    supply_multiplier=0.0, arc_cap=None, storage_cap_per_node=None,
+    solver=None, verbose=False, freeze_alpha_after_first=False, relax_integrality=False, I0_start=None,
+):
+    """Budget-constrained twin of simulate_aro_adr_under_draws_cms: drops the
+    per-drug shortage penalty c_pen from the objective in favor of a
+    lexicographic unmet_priority weight on cp.sum(u), and caps transport +
+    procurement spend per period via budget_cap / total_budget (shared pool,
+    spent greedily) / period_budget_caps (precomputed per-period caps, highest
+    priority). The robust dual-variable block is byte-identical to the
+    original; only the deterministic objective and one new deterministic
+    constraint change."""
+    nodes   = list(nodes)
+    arcs    = list(arcs)
+    classes = list(classes)
+
+    node_idx = {n: i for i, n in enumerate(nodes)}
+    N, m, K  = len(nodes), len(arcs), len(classes)
+
+    if arc_cap is None:
+        raise ValueError("arc_cap must be provided")
+    if Gamma < 0:
+        raise ValueError("Gamma must be nonnegative")
+
+    if np.isscalar(arc_cap):
+        arc_cap_vec = np.full(m, float(arc_cap))
+    else:
+        arc_cap_vec = np.array([float(arc_cap[(i, j)]) for (i, j) in arcs], dtype=float)
+
+    c_arc  = np.array([float(dist_km.loc[i, j]) for (i, j) in arcs], dtype=float)
+    c_proc = _resolve_c_proc(procurement_cost_per_unit, classes)  # ← resolve once
+
+    mu_mat    = mu_mat.reindex(index=nodes, columns=classes).fillna(0.0).astype(float)
+    mu_np     = mu_mat.to_numpy()
+    sigma_mat = sigma_mat.reindex(index=nodes, columns=classes).fillna(0.0).astype(float)
+    sigma_np  = sigma_mat.to_numpy()
+
+    adaptive_arc_mask = np.array([
+        1.0 if (row.u_tier in ["cms","warehouse","hospital"]
+                and row.v_tier in ["clinic","warehouse","hospital","health_post"]) else 0.0
+        for row in arc_df.itertuples(index=False)
+    ], dtype=float)
+
+    arc_dest_idx = np.array([node_idx[j] for (i, j) in arcs], dtype=int)
+
+    in_arcs  = [[] for _ in range(N)]
+    out_arcs = [[] for _ in range(N)]
+    for a, (i, j) in enumerate(arcs):
+        out_arcs[node_idx[i]].append(a)
+        in_arcs[node_idx[j]].append(a)
+
+    arcs_from_to = [[[] for _ in range(N)] for _ in range(N)]
+    for a, (i, j) in enumerate(arcs):
+        arcs_from_to[node_idx[i]][node_idx[j]].append(a)
+
+    _adaptive_out = [{} for _ in range(N)]
+    for a, (i, j) in enumerate(arcs):
+        if adaptive_arc_mask[a] == 1.0:
+            _adaptive_out[node_idx[i]].setdefault(node_idx[j], []).append(a)
+    adaptive_out = [sorted(d.items()) for d in _adaptive_out]
+
+    if storage_cap_per_node is None:
+        cap_vec = None
+    else:
+        cap_vec = (np.full(N, float(storage_cap_per_node)) if np.isscalar(storage_cap_per_node)
+                   else pd.Series(storage_cap_per_node).reindex(nodes).astype(float).to_numpy())
+
+    if I0_start is not None:
+        I = I0_start.reindex(index=nodes, columns=classes).fillna(0.0)
+    else:
+        I = pd.DataFrame(0.0, index=nodes, columns=classes)
+        I.loc[CMS, :] = supply_multiplier * mu_mat.sum(axis=0)
+    learned_alpha = None
+    metrics = []
+    budget_remaining = float(total_budget) if total_budget is not None else None
+
+    def nk_index(n, k): return n * K + k
+
+    for t in range(T):
+        I0 = I.to_numpy().copy()
+        Fbar = cp.Variable((m, K), nonneg=True)
+
+        if freeze_alpha_after_first and learned_alpha is not None:
+            alpha     = None
+            alpha_val = np.asarray(learned_alpha, dtype=float)
+        else:
+            alpha     = cp.Variable((m, K))
+            alpha_val = None
+
+        u  = cp.Variable((N, K), nonneg=True)
+        I1 = cp.Variable((N, K), nonneg=True)
+        q  = cp.Variable(K, nonneg=True)
+        constraints = []
+
+        if relax_integrality:
+            lam = cp.Variable(m, nonneg=True)
+            y   = cp.Variable(m, nonneg=True)
+            constraints += [y <= 1.0]
+        else:
+            lam = cp.Variable(m, integer=True)
+            y   = cp.Variable(m, boolean=True)
+
+        theta         = cp.Variable((N, K), nonneg=True)
+        pi_plus       = cp.Variable((N * K, N), nonneg=True)
+        pi_minus      = cp.Variable((N * K, N), nonneg=True)
+        theta_ship    = cp.Variable((N, K), nonneg=True)
+        pi_ship_plus  = cp.Variable((N * K, N), nonneg=True)
+        pi_ship_minus = cp.Variable((N * K, N), nonneg=True)
+        eta           = cp.Variable(m, nonneg=True)
+        rho_plus      = cp.Variable((m, K), nonneg=True)
+        rho_minus     = cp.Variable((m, K), nonneg=True)
+
+        if alpha is not None:
+            if np.isfinite(alpha_lb):
+                constraints.append(alpha >= alpha_lb)
+            if np.isfinite(alpha_ub):
+                constraints.append(alpha <= alpha_ub)
+
+        big_m = 1e5
+
+        for a in range(m):
+            j = arc_dest_idx[a]
+            rhs_cap = arc_cap_vec[a] * lam[a] - cp.sum(Fbar[a, :])
+            constraints.append(
+                Gamma * eta[a] + cp.sum(rho_plus[a, :] + rho_minus[a, :]) <= rhs_cap
+            )
+            for k in range(K):
+                coeff = alpha[a, k] if alpha is not None else alpha_val[a, k]
+                constraints.append(eta[a] + rho_plus[a, k]  >= coeff * sigma_np[j, k])
+                constraints.append(eta[a] + rho_minus[a, k] >= -coeff * sigma_np[j, k])
+            constraints.append(lam[a] >= 0)
+            constraints.append(lam[a] <= big_m * y[a])
+
+        for n in range(N):
+            for k in range(K):
+                nk      = nk_index(n, k)
+                inflow  = cp.sum(Fbar[in_arcs[n],  k]) if in_arcs[n]  else 0
+                outflow = cp.sum(Fbar[out_arcs[n], k]) if out_arcs[n] else 0
+                supply  = q[k] if nodes[n] == CMS else 0.0
+                demand  = float(mu_np[n, k])
+                rhs = I0[n,k] + inflow - outflow + supply - demand + u[n,k] - I1[n,k]
+                constraints.append(
+                    Gamma * theta[n,k] + cp.sum(pi_plus[nk,:]) + cp.sum(pi_minus[nk,:]) <= rhs
+                )
+                incoming_adaptive = [a for a in in_arcs[n] if adaptive_arc_mask[a] == 1.0]
+                coeff_self = ((cp.sum(alpha[incoming_adaptive, k]) if incoming_adaptive else 0) - 1.0
+                              if alpha is not None else
+                              (float(np.sum(alpha_val[incoming_adaptive, k])) if incoming_adaptive else 0.0) - 1.0)
+                constraints.append(theta[n,k] + pi_plus[nk,n]  >= coeff_self * sigma_np[n,k])
+                constraints.append(theta[n,k] + pi_minus[nk,n] >= -coeff_self * sigma_np[n,k])
+                for r, nr_arcs in adaptive_out[n]:
+                    coeff_out = (-cp.sum(alpha[nr_arcs, k]) if alpha is not None
+                                 else -float(np.sum(alpha_val[nr_arcs, k])))
+                    constraints.append(theta[n,k] + pi_plus[nk,r]  >= coeff_out * sigma_np[r,k])
+                    constraints.append(theta[n,k] + pi_minus[nk,r] >= -coeff_out * sigma_np[r,k])
+
+                rhs_ship = I0[n,k] + inflow + supply - outflow
+                constraints.append(
+                    Gamma * theta_ship[n,k] + cp.sum(pi_ship_plus[nk,:]) + cp.sum(pi_ship_minus[nk,:]) <= rhs_ship
+                )
+                coeff_self_ship = ((-cp.sum(alpha[incoming_adaptive, k]) if incoming_adaptive else 0)
+                                   if alpha is not None else
+                                   (-float(np.sum(alpha_val[incoming_adaptive, k])) if incoming_adaptive else 0.0))
+                constraints.append(theta_ship[n,k] + pi_ship_plus[nk,n]  >= coeff_self_ship * sigma_np[n,k])
+                constraints.append(theta_ship[n,k] + pi_ship_minus[nk,n] >= -coeff_self_ship * sigma_np[n,k])
+                for r, nr_arcs in adaptive_out[n]:
+                    coeff_out_ship = (cp.sum(alpha[nr_arcs, k]) if alpha is not None
+                                      else float(np.sum(alpha_val[nr_arcs, k])))
+                    constraints.append(theta_ship[n,k] + pi_ship_plus[nk,r]  >= coeff_out_ship * sigma_np[r,k])
+                    constraints.append(theta_ship[n,k] + pi_ship_minus[nk,r] >= -coeff_out_ship * sigma_np[r,k])
+
+        if cap_vec is not None:
+            for n in range(N):
+                constraints.append(cp.sum(I1[n, :]) <= cap_vec[n])
+
+        transport_cost_expr = transport_cost_per_km * cp.sum(cp.multiply(c_arc, lam))
+        holding_cost_expr = holding_cost_per_unit * cp.sum(I1)
+        procurement_cost_expr = cp.sum(cp.multiply(c_proc, q))
+
+        if period_budget_caps is not None:
+            period_cap = float(period_budget_caps[t])
+        elif total_budget is not None:
+            period_cap = budget_remaining
+        else:
+            period_cap = budget_cap
+
+        if period_cap is not None:
+            constraints.append(transport_cost_expr + procurement_cost_expr <= period_cap)
+
+        obj = cp.Minimize(
+            unmet_priority * cp.sum(u)
+            + transport_cost_expr + holding_cost_expr + procurement_cost_expr
+        )
+        prob = cp.Problem(obj, constraints)
+        prob.solve(solver=solver, verbose=verbose)
+        if prob.status not in ("optimal", "optimal_inaccurate"):
+            raise RuntimeError(f"Failed at t={t}: {prob.status}")
+
+        if alpha is not None:
+            learned_alpha = np.asarray(alpha.value, dtype=float)
+
+        Fbar_val  = np.maximum(np.asarray(Fbar.value, dtype=float), 0.0)
+        alpha_use = (np.asarray(learned_alpha, dtype=float) if learned_alpha is not None
+                     else np.asarray(alpha_val, dtype=float))
+        realized    = pd.DataFrame(demand_draws[t], index=nodes, columns=classes)
+        realized_np = realized.to_numpy()
+        xi_real     = realized_np - mu_np
+
+        ship_np = np.zeros((m, K), dtype=float)
+        for a in range(m):
+            dest = arc_dest_idx[a]
+            ship_np[a, :] = (Fbar_val[a, :] + alpha_use[a, :] * xi_real[dest, :]
+                             if adaptive_arc_mask[a] == 1.0 else Fbar_val[a, :])
+        ship_np = np.maximum(ship_np, 0.0)
+
+        ship_by_arc = {(i, j): pd.Series(ship_np[a, :], index=classes)
+                       for a, (i, j) in enumerate(arcs)}
+        q_ser   = pd.Series(np.maximum(np.asarray(q.value, dtype=float), 0.0), index=classes)
+
+        # Continuous lam for cost accounting -- see note in the base/seasonal
+        # budget variants: rounding silently zeroes fractional trip counts
+        # under relax_integrality=True and falsely reports spend under budget.
+        lam_val_cost = np.maximum(np.asarray(lam.value, dtype=float), 0.0)
+
+        I_next = pd.DataFrame(0.0, index=nodes, columns=classes)
+        unmet  = pd.DataFrame(0.0, index=nodes, columns=classes)
+        for n_name in nodes:
+            inflow  = pd.Series(0.0, index=classes)
+            outflow = pd.Series(0.0, index=classes)
+            for (i, j), ship_ser in ship_by_arc.items():
+                if j == n_name: inflow  = inflow.add(ship_ser,  fill_value=0.0)
+                if i == n_name: outflow = outflow.add(ship_ser, fill_value=0.0)
+            add_supply = q_ser if n_name == CMS else pd.Series(0.0, index=classes)
+            demand_vec = realized.loc[n_name, :]
+            avail      = I.loc[n_name, :] + add_supply + inflow - outflow
+            served     = np.minimum(avail, demand_vec)
+            unmet.loc[n_name, :]  = demand_vec - served
+            I_next.loc[n_name, :] = avail - served
+        I = I_next.copy()
+
+        transport_cost = float(np.sum(c_arc * lam_val_cost)) * transport_cost_per_km
+        holding_cost   = holding_cost_per_unit * float(I.to_numpy().sum())
+        proc_cost      = float((q_ser * pd.Series(c_proc, index=classes)).sum())
+
+        if total_budget is not None:
+            budget_remaining -= (transport_cost + proc_cost)
+
+        total_demand = float(realized.to_numpy().sum())
+        total_unmet  = float(unmet.to_numpy().sum())
+        alpha_mean   = float(np.mean(learned_alpha)) if learned_alpha is not None else np.nan
+
+        metrics.append({
+            "t": t,
+            "alpha_opt_mean":          alpha_mean,
+            "objective_realized":      transport_cost + holding_cost + proc_cost,
+            "transport_cost_realized": transport_cost,
+            "holding_cost_end":        holding_cost,
+            "procurement_cost":        proc_cost,
+            "unmet_pct_realized":      (total_unmet / total_demand * 100.0) if total_demand > 0 else 0.0,
+            "total_unmet_units":       total_unmet,
+            "total_demand_units":      total_demand,
+            "total_procured_units":    float(q_ser.sum()),
+            "budget_remaining":        budget_remaining if budget_remaining is not None else np.nan,
+        })
+
+    learned_alpha_out = pd.DataFrame(
+        learned_alpha, index=[f"{i}->{j}" for (i, j) in arcs], columns=classes,
+    )
+    return pd.DataFrame(metrics), learned_alpha_out, I
+
+
+def simulate_policy_budget_under_draws_cms(
+    T, CMS, nodes, arcs, classes, dist_km, mu_mat, demand_draws,
+    unmet_priority=1e4, budget_cap=None, total_budget=None, period_budget_caps=None,
+    transport_cost_per_km=0.5,
+    holding_cost_per_unit=0.1, procurement_cost_per_unit=0.0,
+    supply_multiplier=0.0, arc_cap=None, storage_cap_per_node=None,
+    solver=None, verbose=False, relax_integrality=False, I0_start=None,
+):
+    """Budget-constrained twin of simulate_policy_under_draws_cms: drops the per-drug
+    shortage penalty, replaced by a lexicographic unmet_priority weight on
+    cp.sum(u), and caps transport+procurement spend per period via budget_cap /
+    total_budget / period_budget_caps (same semantics as
+    simulate_aro_adr_budget_under_draws_cms). The deterministic policy."""
+    nodes   = list(nodes)
+    arcs    = list(arcs)
+    classes = list(classes)
+
+    node_idx = {n: i for i, n in enumerate(nodes)}
+    N, m, K  = len(nodes), len(arcs), len(classes)
+
+    if arc_cap is None:
+        raise ValueError("arc_cap must be provided")
+    if np.isscalar(arc_cap):
+        arc_cap_vec = np.full(m, float(arc_cap))
+    else:
+        arc_cap_vec = np.array([float(arc_cap[(i, j)]) for (i, j) in arcs], dtype=float)
+
+    c_arc  = np.array([float(dist_km.loc[i, j]) for (i, j) in arcs], dtype=float)
+    c_proc = _resolve_c_proc(procurement_cost_per_unit, classes)  # ← resolve once
+
+    mu_mat = mu_mat.reindex(index=nodes, columns=classes).fillna(0.0).astype(float)
+    mu_np  = mu_mat.to_numpy()
+
+    in_arcs  = [[] for _ in range(N)]
+    out_arcs = [[] for _ in range(N)]
+    for a, (i, j) in enumerate(arcs):
+        out_arcs[node_idx[i]].append(a)
+        in_arcs[node_idx[j]].append(a)
+
+    if storage_cap_per_node is None:
+        cap_vec = None
+    else:
+        cap_vec = (np.full(N, float(storage_cap_per_node)) if np.isscalar(storage_cap_per_node)
+                   else pd.Series(storage_cap_per_node).reindex(nodes).astype(float).to_numpy())
+
+    if I0_start is not None:
+        I = I0_start.reindex(index=nodes, columns=classes).fillna(0.0)
+    else:
+        I = pd.DataFrame(0.0, index=nodes, columns=classes)
+        I.loc[CMS, :] = supply_multiplier * mu_mat.sum(axis=0)
+    metrics = []
+    budget_remaining = float(total_budget) if total_budget is not None else None
+    nominal_mu = mu_mat.copy()
+
+    for t in range(T):
+        I0 = I.to_numpy().copy()
+        F  = cp.Variable((m, K), nonneg=True)
+        u  = cp.Variable((N, K), nonneg=True)
+        I1 = cp.Variable((N, K), nonneg=True)
+        q  = cp.Variable(K, nonneg=True)
+        constraints = []
+
+        if relax_integrality:
+            lam = cp.Variable(m, nonneg=True)
+            y   = cp.Variable(m, nonneg=True)
+            constraints += [y <= 1.0]
+        else:
+            lam = cp.Variable(m, integer=True)
+            y   = cp.Variable(m, boolean=True)
+
+        big_m = 1e5
+        for a in range(m):
+            constraints.append(cp.sum(F[a, :]) <= arc_cap_vec[a] * lam[a])
+            constraints.append(lam[a] >= 0)
+            constraints.append(lam[a] <= big_m * y[a])
+
+        for n in range(N):
+            for k in range(K):
+                inflow  = cp.sum(F[in_arcs[n],  k]) if in_arcs[n]  else 0
+                outflow = cp.sum(F[out_arcs[n], k]) if out_arcs[n] else 0
+                supply  = q[k] if nodes[n] == CMS else 0.0
+                demand  = float(mu_np[n, k])
+                constraints.append(
+                    I1[n, k] == I0[n, k] + inflow - outflow + supply - demand + u[n, k]
+                )
+                constraints.append(outflow <= I0[n, k] + inflow + supply)
+
+        if cap_vec is not None:
+            for n in range(N):
+                constraints.append(cp.sum(I1[n, :]) <= cap_vec[n])
+
+        transport_cost_expr   = transport_cost_per_km * cp.sum(cp.multiply(c_arc, lam))
+        holding_cost_expr     = holding_cost_per_unit * cp.sum(I1)
+        procurement_cost_expr = cp.sum(cp.multiply(c_proc, q))  # ← per-drug cost
+
+        if period_budget_caps is not None:
+            period_cap = float(period_budget_caps[t])
+        elif total_budget is not None:
+            period_cap = budget_remaining
+        else:
+            period_cap = budget_cap
+
+        if period_cap is not None:
+            constraints.append(transport_cost_expr + procurement_cost_expr <= period_cap)
+
+        obj = cp.Minimize(
+            unmet_priority * cp.sum(u)
+            + transport_cost_expr
+            + holding_cost_expr
+            + procurement_cost_expr
+        )
+        prob = cp.Problem(obj, constraints)
+        prob.solve(solver=solver, verbose=verbose)
+        if prob.status not in ("optimal", "optimal_inaccurate"):
+            raise RuntimeError(f"Failed at t={t}: {prob.status}")
+
+        F_val = np.maximum(np.asarray(F.value, dtype=float), 0.0)
+        realized = pd.DataFrame(demand_draws[t], index=nodes, columns=classes)
+        ship_by_arc = {(i, j): pd.Series(F_val[a, :], index=classes)
+                       for a, (i, j) in enumerate(arcs)}
+        q_ser   = pd.Series(np.maximum(np.asarray(q.value, dtype=float), 0.0), index=classes)
+        # Continuous lam for cost accounting -- see the ARO-ADR budget variants
+        # for why rounding silently understates spend under relax_integrality.
+        lam_val_cost = np.maximum(np.asarray(lam.value, dtype=float), 0.0)
+
+        I_next = pd.DataFrame(0.0, index=nodes, columns=classes)
+        unmet  = pd.DataFrame(0.0, index=nodes, columns=classes)
+        for n_name in nodes:
+            inflow  = pd.Series(0.0, index=classes)
+            outflow = pd.Series(0.0, index=classes)
+            for (i, j), ship_ser in ship_by_arc.items():
+                if j == n_name: inflow  = inflow.add(ship_ser,  fill_value=0.0)
+                if i == n_name: outflow = outflow.add(ship_ser, fill_value=0.0)
+            add_supply  = q_ser if n_name == CMS else pd.Series(0.0, index=classes)
+            demand_vec  = realized.loc[n_name, :]
+            avail       = I.loc[n_name, :] + add_supply + inflow - outflow
+            served      = np.minimum(avail, demand_vec)
+            unmet.loc[n_name, :]  = demand_vec - served
+            I_next.loc[n_name, :] = avail - served
+        I = I_next.copy()
+
+        transport_cost = float(np.sum(c_arc * lam_val_cost)) * transport_cost_per_km
+        holding_cost   = holding_cost_per_unit     * float(I.to_numpy().sum())
+        proc_cost      = float((q_ser * pd.Series(c_proc, index=classes)).sum())
+
+        if total_budget is not None:
+            budget_remaining -= (transport_cost + proc_cost)
+
+        total_demand = float(realized.to_numpy().sum())
+        total_unmet  = float(unmet.to_numpy().sum())
+        metrics.append({
+            "t": t,
+            "objective_realized":      transport_cost + holding_cost + proc_cost,
+            "transport_cost_realized": transport_cost,
+            "holding_cost_end":        holding_cost,
+            "procurement_cost":        proc_cost,
+            "unmet_pct_realized":      (total_unmet / total_demand * 100.0) if total_demand > 0 else 0.0,
+            "total_unmet_units":       total_unmet,
+            "total_demand_units":      total_demand,
+            "total_procured_units":    float(q_ser.sum()),
+            "budget_remaining":        budget_remaining if budget_remaining is not None else np.nan,
+        })
+    return pd.DataFrame(metrics), nominal_mu, I
+
+
+def simulate_static_robust_budget_under_draws_cms(
+    T, CMS, nodes, arcs, classes, dist_km, mu_mat, demand_draws, sigma_mat, Gamma,
+    unmet_priority=1e4, budget_cap=None, total_budget=None, period_budget_caps=None,
+    transport_cost_per_km=0.5,
+    holding_cost_per_unit=0.1, procurement_cost_per_unit=0.0,
+    supply_multiplier=0.0, arc_cap=None, storage_cap_per_node=None,
+    solver=None, verbose=False, relax_integrality=False, I0_start=None,
+):
+    """Budget-constrained twin of simulate_static_robust_under_draws_cms: drops the per-drug
+    shortage penalty, replaced by a lexicographic unmet_priority weight on
+    cp.sum(u), and caps transport+procurement spend per period via budget_cap /
+    total_budget / period_budget_caps (same semantics as
+    simulate_aro_adr_budget_under_draws_cms). The robust dual-variable block is unchanged."""
+    nodes   = list(nodes)
+    arcs    = list(arcs)
+    classes = list(classes)
+
+    node_idx = {n: i for i, n in enumerate(nodes)}
+    N, m, K  = len(nodes), len(arcs), len(classes)
+
+    if arc_cap is None:
+        raise ValueError("arc_cap must be provided")
+    if np.isscalar(arc_cap):
+        arc_cap_vec = np.full(m, float(arc_cap))
+    else:
+        arc_cap_vec = np.array([float(arc_cap[(i, j)]) for (i, j) in arcs], dtype=float)
+
+    c_arc  = np.array([float(dist_km.loc[i, j]) for (i, j) in arcs], dtype=float)
+    c_proc = _resolve_c_proc(procurement_cost_per_unit, classes)  # ← resolve once
+
+    mu_mat    = mu_mat.reindex(index=nodes,    columns=classes).fillna(0.0).astype(float)
+    sigma_mat = sigma_mat.reindex(index=nodes, columns=classes).fillna(0.0).astype(float)
+    mu_np     = mu_mat.to_numpy()
+    sigma_np  = sigma_mat.to_numpy()
+
+    in_arcs  = [[] for _ in range(N)]
+    out_arcs = [[] for _ in range(N)]
+    for a, (i, j) in enumerate(arcs):
+        out_arcs[node_idx[i]].append(a)
+        in_arcs[node_idx[j]].append(a)
+
+    if storage_cap_per_node is None:
+        cap_vec = None
+    else:
+        cap_vec = (np.full(N, float(storage_cap_per_node)) if np.isscalar(storage_cap_per_node)
+                   else pd.Series(storage_cap_per_node).reindex(nodes).astype(float).to_numpy())
+
+    if I0_start is not None:
+        I = I0_start.reindex(index=nodes, columns=classes).fillna(0.0)
+    else:
+        I = pd.DataFrame(0.0, index=nodes, columns=classes)
+        I.loc[CMS, :] = supply_multiplier * mu_mat.sum(axis=0)
+    metrics = []
+    budget_remaining = float(total_budget) if total_budget is not None else None
+
+    def nk_index(n, k): return n * K + k
+
+    for t in range(T):
+        I0 = I.to_numpy().copy()
+        constraints = []
+        Fbar = cp.Variable((m, K), nonneg=True)
+        u    = cp.Variable((N, K), nonneg=True)
+        I1   = cp.Variable((N, K), nonneg=True)
+        q    = cp.Variable(K, nonneg=True)
+
+        if relax_integrality:
+            lam = cp.Variable(m, nonneg=True)
+            y   = cp.Variable(m, nonneg=True)
+            constraints += [y <= 1.0]
+        else:
+            lam = cp.Variable(m, integer=True)
+            y   = cp.Variable(m, boolean=True)
+
+        theta        = cp.Variable((N, K), nonneg=True)
+        pi_plus      = cp.Variable((N * K, N), nonneg=True)
+        pi_minus     = cp.Variable((N * K, N), nonneg=True)
+        big_m = 1e5
+
+        for a in range(m):
+            constraints.append(cp.sum(Fbar[a, :]) <= arc_cap_vec[a] * lam[a])
+            constraints.append(lam[a] >= 0)
+            constraints.append(lam[a] <= big_m * y[a])
+
+        for n in range(N):
+            for k in range(K):
+                nk      = nk_index(n, k)
+                inflow  = cp.sum(Fbar[in_arcs[n],  k]) if in_arcs[n]  else 0
+                outflow = cp.sum(Fbar[out_arcs[n], k]) if out_arcs[n] else 0
+                supply  = q[k] if nodes[n] == CMS else 0.0
+                demand  = float(mu_np[n, k])
+                rhs = I0[n,k] + inflow - outflow + supply - demand + u[n,k] - I1[n,k]
+                constraints.append(
+                    Gamma * theta[n,k] + cp.sum(pi_plus[nk,:]) + cp.sum(pi_minus[nk,:]) <= rhs
+                )
+                constraints.append(theta[n,k] + pi_plus[nk,n]  >= -sigma_np[n,k])
+                constraints.append(theta[n,k] + pi_minus[nk,n] >=  sigma_np[n,k])
+                # shipment availability (eq:availability): it contains no demand, so its
+                # robust counterpart is the constraint itself; the hedge comes from the
+                # robust inventory balance above
+                constraints.append(outflow <= I0[n,k] + inflow + supply)
+
+        if cap_vec is not None:
+            for n in range(N):
+                constraints.append(cp.sum(I1[n, :]) <= cap_vec[n])
+
+        transport_cost_expr   = transport_cost_per_km * cp.sum(cp.multiply(c_arc, lam))
+        holding_cost_expr     = holding_cost_per_unit * cp.sum(I1)
+        procurement_cost_expr = cp.sum(cp.multiply(c_proc, q))  # ← per-drug cost
+
+        if period_budget_caps is not None:
+            period_cap = float(period_budget_caps[t])
+        elif total_budget is not None:
+            period_cap = budget_remaining
+        else:
+            period_cap = budget_cap
+
+        if period_cap is not None:
+            constraints.append(transport_cost_expr + procurement_cost_expr <= period_cap)
+
+        obj = cp.Minimize(
+            unmet_priority * cp.sum(u)
+            + transport_cost_expr
+            + holding_cost_expr
+            + procurement_cost_expr
+        )
+        prob = cp.Problem(obj, constraints)
+        prob.solve(solver=solver, verbose=verbose)
+        if prob.status not in ("optimal", "optimal_inaccurate"):
+            raise RuntimeError(f"Failed at t={t}: {prob.status}")
+
+        Fbar_val = np.maximum(np.asarray(Fbar.value, dtype=float), 0.0)
+        realized = pd.DataFrame(demand_draws[t], index=nodes, columns=classes)
+        ship_by_arc = {(i, j): pd.Series(Fbar_val[a, :], index=classes)
+                       for a, (i, j) in enumerate(arcs)}
+        q_ser   = pd.Series(np.maximum(np.asarray(q.value, dtype=float), 0.0), index=classes)
+        # Continuous lam for cost accounting -- see the ARO-ADR budget variants
+        # for why rounding silently understates spend under relax_integrality.
+        lam_val_cost = np.maximum(np.asarray(lam.value, dtype=float), 0.0)
+
+        I_next = pd.DataFrame(0.0, index=nodes, columns=classes)
+        unmet  = pd.DataFrame(0.0, index=nodes, columns=classes)
+        for n_name in nodes:
+            inflow  = pd.Series(0.0, index=classes)
+            outflow = pd.Series(0.0, index=classes)
+            for (i, j), ship_ser in ship_by_arc.items():
+                if j == n_name: inflow  = inflow.add(ship_ser,  fill_value=0.0)
+                if i == n_name: outflow = outflow.add(ship_ser, fill_value=0.0)
+            add_supply = q_ser if n_name == CMS else pd.Series(0.0, index=classes)
+            demand_vec = realized.loc[n_name, :]
+            avail      = I.loc[n_name, :] + add_supply + inflow - outflow
+            served     = np.minimum(np.maximum(avail, 0.0), demand_vec)
+            unmet.loc[n_name, :]  = demand_vec - served
+            I_next.loc[n_name, :] = avail - served
+        I = I_next.copy()
+
+        transport_cost = float(np.sum(c_arc * lam_val_cost)) * transport_cost_per_km
+        holding_cost   = holding_cost_per_unit     * float(I.to_numpy().sum())
+        proc_cost      = float((q_ser * pd.Series(c_proc, index=classes)).sum())
+
+        if total_budget is not None:
+            budget_remaining -= (transport_cost + proc_cost)
+
+        total_demand = float(realized.to_numpy().sum())
+        total_unmet  = float(unmet.to_numpy().sum())
+        metrics.append({
+            "t": t,
+            "objective_realized":      transport_cost + holding_cost + proc_cost,
+            "transport_cost_realized": transport_cost,
+            "holding_cost_end":        holding_cost,
+            "procurement_cost":        proc_cost,
+            "unmet_pct_realized":      (total_unmet / total_demand * 100.0) if total_demand > 0 else 0.0,
+            "total_unmet_units":       total_unmet,
+            "total_demand_units":      total_demand,
+            "total_procured_units":    float(q_ser.sum()),
+            "budget_remaining":        budget_remaining if budget_remaining is not None else np.nan,
+        })
+    return pd.DataFrame(metrics), mu_mat.copy(), I
+
+
+# Budget level: B^(t) = BUDGET_FACTOR * B_ref^(t), the same rule as the notebook.
+BUDGET_FACTOR = 1.25
+
+def forecast_period_cost_cms(inst, relax_integrality=True, transport_cost_per_km=0.5,
+                             holding_cost_per_unit=0.1):
+    """B_ref: transport + procurement spend of one uncapped deterministic
+    budget-model period whose realized demand equals the forecast, from empty
+    shelves, at the instance's per-drug prices."""
+    mu = inst["mu_mat"]
+    classes = mu.columns.tolist()
+    m, _, _ = simulate_policy_budget_under_draws_cms(
+        T=1, CMS=inst["CMS"], nodes=inst["nodes"], arcs=inst["arcs"], classes=classes,
+        dist_km=inst["dist_km"], mu_mat=mu,
+        demand_draws=mu.reindex(index=inst["nodes"], columns=classes).fillna(0.0).to_numpy()[None, ...],
+        transport_cost_per_km=transport_cost_per_km, holding_cost_per_unit=holding_cost_per_unit,
+        procurement_cost_per_unit=inst["proc_cost"], supply_multiplier=0.0,
+        arc_cap=inst["arc_cap"], storage_cap_per_node=inst["storage_cap_per_node"],
+        solver=SOLVER, verbose=False, relax_integrality=relax_integrality,
+    )
+    return float(m["transport_cost_realized"].iloc[0] + m["procurement_cost"].iloc[0])
+
+
 def run_region(region, T=26):
     """Run both years for one region. Returns (list_of_metric_dicts, error_str_or_None).
     T is the number of biweekly periods (26 = full year; use a small T for a smoke test)."""
     kappa = 10.0; seed = 42; Gamma = 10.0
     results = []
     try:
-        # Year 1: 2025-26
-        inst_y1    = build_cms_region_instance(region, scenario="2526")
-        classes_y1 = inst_y1["mu_mat"].columns.tolist()
-        draws_y1   = make_nb_draws_from_mean(inst_y1["mu_mat"], kappa=kappa, T=T, seed=seed)
-        shared_y1  = dict(T=T, CMS=inst_y1["CMS"], nodes=inst_y1["nodes"], arcs=inst_y1["arcs"],
-                           classes=classes_y1, dist_km=inst_y1["dist_km"], mu_mat=inst_y1["mu_mat"],
-                           demand_draws=draws_y1,
-                           transport_cost_per_km=0.5, shortage_penalty_per_unit=5.0*inst_y1["proc_cost"],
-                           holding_cost_per_unit=0.1, procurement_cost_per_unit=inst_y1["proc_cost"],
-                           supply_multiplier=0.0, arc_cap=inst_y1["arc_cap"],
-                           storage_cap_per_node=inst_y1["storage_cap_per_node"],
-                           solver=SOLVER, verbose=False, relax_integrality=True, I0_start=None)
-
-        m_det_y1, _, final_I_det = simulate_policy_under_draws_cms(**shared_y1)
-        m_rob_y1, _, final_I_rob = simulate_static_robust_under_draws_cms(**shared_y1, sigma_mat=inst_y1["sigma_mat"], Gamma=Gamma)
-        m_aro_y1, _, final_I_aro = simulate_aro_adr_under_draws_cms(**shared_y1, arc_df=inst_y1["arc_df"],
-                                                                     sigma_mat=inst_y1["sigma_mat"], Gamma=Gamma)
-        for m, name in [(m_det_y1,"deterministic"), (m_rob_y1,"static_robust"), (m_aro_y1,"aro_adr")]:
-            m["region"] = region; m["model"] = name; m["scenario"] = "2526"
-            results.append(m)
-
-        # Year 2: 2026-27 (carry forward final inventory)
-        inst_y2    = build_cms_region_instance(region, scenario="2627")
-        classes_y2 = inst_y2["mu_mat"].columns.tolist()
-        draws_y2   = make_nb_draws_from_mean(inst_y2["mu_mat"], kappa=kappa, T=T, seed=seed)
-        shared_y2  = dict(T=T, CMS=inst_y2["CMS"], nodes=inst_y2["nodes"], arcs=inst_y2["arcs"],
-                           classes=classes_y2, dist_km=inst_y2["dist_km"], mu_mat=inst_y2["mu_mat"],
-                           demand_draws=draws_y2,
-                           transport_cost_per_km=0.5, shortage_penalty_per_unit=5.0*inst_y2["proc_cost"],
-                           holding_cost_per_unit=0.1, procurement_cost_per_unit=inst_y2["proc_cost"],
-                           supply_multiplier=0.0, arc_cap=inst_y2["arc_cap"],
-                           storage_cap_per_node=inst_y2["storage_cap_per_node"],
+        final_I = {"deterministic": None, "static_robust": None, "aro_adr": None}
+        for scenario in ("2526", "2627"):
+            # Year 2 starts from year 1's final inventory, so the policies must
+            # adapt to shifted demand without a reset.
+            inst    = build_cms_region_instance(region, scenario=scenario)
+            classes = inst["mu_mat"].columns.tolist()
+            draws   = make_nb_draws_from_mean(inst["mu_mat"], kappa=kappa, T=T, seed=seed)
+            budget_cap = BUDGET_FACTOR * forecast_period_cost_cms(inst)
+            shared  = dict(T=T, CMS=inst["CMS"], nodes=inst["nodes"], arcs=inst["arcs"],
+                           classes=classes, dist_km=inst["dist_km"], mu_mat=inst["mu_mat"],
+                           demand_draws=draws, budget_cap=budget_cap,
+                           transport_cost_per_km=0.5, holding_cost_per_unit=0.1,
+                           procurement_cost_per_unit=inst["proc_cost"],
+                           supply_multiplier=0.0, arc_cap=inst["arc_cap"],
+                           storage_cap_per_node=inst["storage_cap_per_node"],
                            solver=SOLVER, verbose=False, relax_integrality=True)
 
-        m_det_y2, _, _ = simulate_policy_under_draws_cms(**shared_y2,         I0_start=final_I_det)
-        m_rob_y2, _, _ = simulate_static_robust_under_draws_cms(**shared_y2,  sigma_mat=inst_y2["sigma_mat"],
-                                                                               Gamma=Gamma, I0_start=final_I_rob)
-        m_aro_y2, _, _ = simulate_aro_adr_under_draws_cms(**shared_y2,        arc_df=inst_y2["arc_df"],
-                                                                               sigma_mat=inst_y2["sigma_mat"],
-                                                                               Gamma=Gamma, I0_start=final_I_aro)
-        for m, name in [(m_det_y2,"deterministic"), (m_rob_y2,"static_robust"), (m_aro_y2,"aro_adr")]:
-            m["region"] = region; m["model"] = name; m["scenario"] = "2627"
-            results.append(m)
+            m_det, _, final_I["deterministic"] = simulate_policy_budget_under_draws_cms(
+                **shared, I0_start=final_I["deterministic"])
+            m_rob, _, final_I["static_robust"] = simulate_static_robust_budget_under_draws_cms(
+                **shared, sigma_mat=inst["sigma_mat"], Gamma=Gamma, I0_start=final_I["static_robust"])
+            m_aro, _, final_I["aro_adr"] = simulate_aro_adr_budget_under_draws_cms(
+                **shared, arc_df=inst["arc_df"], sigma_mat=inst["sigma_mat"], Gamma=Gamma,
+                I0_start=final_I["aro_adr"])
+            for m, name in [(m_det, "deterministic"), (m_rob, "static_robust"), (m_aro, "aro_adr")]:
+                m["region"] = region; m["model"] = name; m["scenario"] = scenario
+                m["budget_cap"] = budget_cap
+                results.append(m)
 
         print(f"  done: {region}", flush=True)
         return results, None
@@ -1172,30 +1857,44 @@ def run_region(region, T=26):
 # Main
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser.add_argument("--regions", nargs="+", default=None,
+                        help="DHMTs to run (default: every DHMT not already in the checkpoint)")
+    parser.add_argument("--T", type=int, default=26,
+                        help="biweekly periods per year (26 = full year)")
+    parser.add_argument("--out-tag", default="",
+                        help="suffix for the output files, e.g. _smoke, so a test never touches the real results")
+    args = parser.parse_args()
+
     load_data()
+
+    partial_path  = OUT_DIR / f"cms_results_partial{args.out_tag}.parquet"
+    final_path    = OUT_DIR / f"cms_results{args.out_tag}.parquet"
+    failures_path = OUT_DIR / f"cms_failures{args.out_tag}.csv"
 
     all_regions = sorted(fac["DHMT"].dropna().astype(str).unique().tolist())
     all_regions = [r for r in all_regions if r != "--"]
-    completed = ['Boteti', 'Chobe', 'Ghanzi', 'Greater Francistown',
-                'Greater Gaborone', 'Greater Phikwe', 'Kgalagadi North',
-                'Kgalagadi South', 'Kgatleng', 'Kweneng', 'Greater Lobatse', 'Ngami']
-    all_regions = sorted(fac["DHMT"].dropna().astype(str).unique().tolist())
-    all_regions = [r for r in all_regions if r != "--" and r not in completed]
-    all_regions = ["North East", "Southern", "Tutume"]
-    print(f"Running {len(all_regions)} regions with max_workers={MAX_WORKERS}")
+    if args.regions:
+        unknown = sorted(set(args.regions) - set(all_regions))
+        if unknown:
+            raise SystemExit(f"unknown regions: {unknown}")
+        all_regions = args.regions
 
-    cms_results  = []
+    cms_results = []
+    if partial_path.exists():
+        done = pd.read_parquet(partial_path)
+        cms_results = [done]
+        finished = set(done["region"].unique())
+        all_regions = [r for r in all_regions if r not in finished]
+        print(f"Resuming from {partial_path}: {len(finished)} regions already done")
+
+    print(f"Running {len(all_regions)} regions with max_workers={MAX_WORKERS}, T={args.T}", flush=True)
     cms_failures = []
 
-    existing_partial = OUT_DIR / "cms_results_partial_two.parquet"
-    if existing_partial.exists():
-        print(f"Found existing partial results at {existing_partial}, loading...")
-        cms_results = [pd.read_parquet(existing_partial)]
-    else:
-        cms_results = []
-
-    with ProcessPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = {executor.submit(run_region, r): r for r in all_regions}
+    # initializer=load_data: macOS starts workers fresh (spawn), so each worker
+    # loads the data itself instead of inheriting it through fork.
+    with ProcessPoolExecutor(max_workers=MAX_WORKERS, initializer=load_data) as executor:
+        futures = {executor.submit(run_region, r, args.T): r for r in all_regions}
         for future in as_completed(futures):
             region = futures[future]
             results, error = future.result()
@@ -1205,15 +1904,14 @@ if __name__ == "__main__":
                 cms_results.extend(results)
             # incremental checkpoint after every completed region
             if cms_results:
-                pd.concat(cms_results, ignore_index=True).to_parquet(
-                    OUT_DIR / "cms_results_partial_two.parquet", index=False)
+                pd.concat(cms_results, ignore_index=True).to_parquet(partial_path, index=False)
 
-    # Final save
-    results_df  = pd.concat(cms_results,  ignore_index=True) if cms_results  else pd.DataFrame()
+    results_df  = pd.concat(cms_results, ignore_index=True) if cms_results else pd.DataFrame()
     failures_df = pd.DataFrame(cms_failures)
 
-    results_df.to_parquet( OUT_DIR / "cms_results_two.parquet",  index=False)
-    failures_df.to_csv(    OUT_DIR / "cms_failures_two.csv",     index=False)
+    results_df.to_parquet(final_path, index=False)
+    failures_df.to_csv(failures_path, index=False)
 
-    print(f"\nDone. {len(results_df)} rows, {len(failures_df)} failures.")
-    print(f"Results saved to {OUT_DIR}/")
+    print(f"\nDone. {len(results_df)} rows, {results_df['region'].nunique() if len(results_df) else 0} regions, "
+          f"{len(failures_df)} failures.")
+    print(f"Results saved to {final_path}")
