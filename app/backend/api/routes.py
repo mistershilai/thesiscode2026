@@ -24,8 +24,11 @@ from ..core.optimizer import (
     nb_sigma_from_mean,
     run_simulation,
     run_planning,
+    forecast_period_cost,
 )
-from .schemas import OptimizationRequest, OptimizationResult, PlanningRequest
+from .schemas import (
+    OptimizationRequest, OptimizationResult, PlanningRequest, ForecastCostRequest,
+)
 
 router = APIRouter(prefix="/api")
 
@@ -628,39 +631,71 @@ def get_region_demand(region: str, scenario: str = "2526", use_cms: bool = True)
     }
 
 
-@router.post("/optimize", response_model=OptimizationResult)
-def run_optimization(req: OptimizationRequest):
+def _prepare_instance(region, scenario, use_cms_data, kappa,
+                      demand_multiplier=1.0, custom_demand=None, arc_cap=None):
+    """Build a region instance and apply the demand and capacity overrides shared
+    by /optimize, /plan and /forecast-cost."""
     try:
-        if req.use_cms_data:
-            instance = build_cms_region_instance(req.region, scenario=req.scenario)
+        if use_cms_data:
+            instance = build_cms_region_instance(region, scenario=scenario)
         else:
-            instance = build_region_instance(req.region)
+            instance = build_region_instance(region)
     except ValueError as e:
         raise HTTPException(400, str(e))
 
-    # Apply demand multiplier
-    if req.demand_multiplier != 1.0:
-        instance["mu_mat"] = instance["mu_mat"] * req.demand_multiplier
-        instance["sigma_mat"] = nb_sigma_from_mean(instance["mu_mat"], kappa=req.kappa)
+    if arc_cap is not None:
+        instance["arc_cap"] = float(arc_cap)
 
-    # Apply custom demand overrides
-    if req.custom_demand:
+    if demand_multiplier != 1.0:
+        instance["mu_mat"] = instance["mu_mat"] * demand_multiplier
+        instance["sigma_mat"] = nb_sigma_from_mean(instance["mu_mat"], kappa=kappa)
+
+    if custom_demand:
         mu_mat = instance["mu_mat"].copy()
-        for fac_name, drug_demands in req.custom_demand.items():
+        for fac_name, drug_demands in custom_demand.items():
             if fac_name not in mu_mat.index:
                 continue
             for drug_class, value in drug_demands.items():
                 if drug_class in mu_mat.columns:
                     mu_mat.loc[fac_name, drug_class] = float(value)
         instance["mu_mat"] = mu_mat
-        instance["sigma_mat"] = nb_sigma_from_mean(mu_mat, kappa=req.kappa)
+        instance["sigma_mat"] = nb_sigma_from_mean(mu_mat, kappa=kappa)
+    return instance
 
-    # Shortage penalty = multiplier × per-drug procurement cost
+
+def _procurement_cost(instance, custom_prices=None):
+    """Per-drug unit prices, with optional user overrides."""
     proc_cost = instance.get("proc_cost", 0.0)
-    if np.isscalar(proc_cost):
-        shortage_pen = req.shortage_penalty * float(proc_cost) if proc_cost else 10.0
-    else:
-        shortage_pen = pd.Series(proc_cost).clip(lower=1.0) * req.shortage_penalty
+    if custom_prices and not np.isscalar(proc_cost):
+        proc_cost = pd.Series(proc_cost).copy()
+        for drug, price in custom_prices.items():
+            if drug in proc_cost.index:
+                proc_cost[drug] = float(price)
+    return proc_cost
+
+
+@router.post("/forecast-cost")
+def get_forecast_cost(req: ForecastCostRequest):
+    """Reference for choosing a budget: the least transport + procurement spend
+    that serves one period's forecast demand in full from empty shelves."""
+    instance = _prepare_instance(req.region, req.scenario, req.use_cms_data, req.kappa,
+                                 req.demand_multiplier, req.custom_demand, req.arc_cap)
+    try:
+        cost = forecast_period_cost(
+            instance, transport_cost_per_km=req.transport_cost_per_km,
+            holding_cost=req.holding_cost,
+            procurement_cost=_procurement_cost(instance, req.custom_prices),
+        )
+    except Exception as e:
+        raise HTTPException(500, f"Forecast cost failed: {e}")
+    return {"region": req.region, "scenario": req.scenario, "forecast_cost": round(cost, 2)}
+
+
+@router.post("/optimize", response_model=OptimizationResult)
+def run_optimization(req: OptimizationRequest):
+    instance = _prepare_instance(req.region, req.scenario, req.use_cms_data, req.kappa,
+                                 req.demand_multiplier, req.custom_demand)
+    proc_cost = _procurement_cost(instance)
 
     try:
         metrics_df = run_simulation(
@@ -670,7 +705,7 @@ def run_optimization(req: OptimizationRequest):
             kappa=req.kappa,
             Gamma=req.gamma,
             transport_cost_per_km=req.transport_cost_per_km,
-            shortage_penalty=shortage_pen,
+            budget=req.budget,
             holding_cost=req.holding_cost,
             procurement_cost=proc_cost,
             supply_multiplier=req.supply_multiplier,
@@ -692,9 +727,11 @@ def run_optimization(req: OptimizationRequest):
             "total_transport_cost": round(float(valid["transport_cost"].sum()), 2),
             "total_procurement_cost": round(float(valid["procurement_cost"].sum()), 2),
             "total_holding_cost": round(float(valid["holding_cost"].sum()), 2),
-            "total_shortage_cost": round(float(valid["shortage_cost"].sum()), 2),
+            "total_spend": round(float(valid["spend"].sum()), 2),
+            "budget_per_period": round(float(req.budget), 2),
+            "avg_budget_used_pct": round(float(valid["budget_used_pct"].mean()), 1) if req.budget else None,
+            "periods_at_budget": int((valid["spend"] >= 0.999 * req.budget).sum()) if req.budget else 0,
             "avg_transport_cost": round(float(valid["transport_cost"].mean()), 2),
-            "avg_shortage_cost": round(float(valid["shortage_cost"].mean()), 2),
             "avg_holding_cost": round(float(valid["holding_cost"].mean()), 2),
             "avg_procurement_cost": round(float(valid["procurement_cost"].mean()), 2),
             "periods_solved": len(valid),
@@ -711,30 +748,9 @@ def run_optimization(req: OptimizationRequest):
 
 @router.post("/plan")
 def run_plan(req: PlanningRequest):
-    try:
-        if req.use_cms_data:
-            instance = build_cms_region_instance(req.region, scenario=req.scenario)
-        else:
-            instance = build_region_instance(req.region)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-
-    if req.arc_cap is not None:
-        instance["arc_cap"] = float(req.arc_cap)
-
-    # Apply custom prices if provided
-    proc_cost = instance.get("proc_cost", 0.0)
-    if req.custom_prices and not np.isscalar(proc_cost):
-        proc_cost = pd.Series(proc_cost).copy()
-        for drug, price in req.custom_prices.items():
-            if drug in proc_cost.index:
-                proc_cost[drug] = float(price)
-
-    # Shortage penalty = multiplier × per-drug procurement cost
-    if np.isscalar(proc_cost):
-        shortage_pen = req.shortage_penalty * float(proc_cost) if proc_cost else 10.0
-    else:
-        shortage_pen = pd.Series(proc_cost).clip(lower=1.0) * req.shortage_penalty
+    instance = _prepare_instance(req.region, req.scenario, req.use_cms_data, req.kappa,
+                                 arc_cap=req.arc_cap)
+    proc_cost = _procurement_cost(instance, req.custom_prices)
 
     try:
         result = run_planning(
@@ -743,7 +759,7 @@ def run_plan(req: PlanningRequest):
             kappa=req.kappa,
             Gamma=req.gamma,
             transport_cost_per_km=req.transport_cost_per_km,
-            shortage_penalty=shortage_pen,
+            budget=req.budget,
             holding_cost=req.holding_cost,
             procurement_cost=proc_cost,
             initial_inventory=req.initial_inventory,
@@ -911,8 +927,13 @@ def export_plan(body: dict):
         ("total_units_procured", "Total Units to Procure"),
         ("total_procurement_cost", "Total Procurement Cost (BWP)"),
         ("total_transport_cost", "Total Transport Cost (BWP)"),
+        ("total_spend", "Spend, transport + procurement (BWP)"),
+        ("budget", "Budget for this period (BWP)"),
+        ("budget_used_pct", "Budget used (%)"),
+        ("planned_unmet_units", "Planned unmet demand (units)"),
         ("total_holding_cost", "Realized Holding Cost (BWP)"),
-        ("total_shortage_cost", "Realized Shortage Cost (BWP)"),
+        ("realized_unmet_units", "Realized unmet demand (units)"),
+        ("realized_unmet_pct", "Realized unmet demand (%)"),
     ]
     r = 5
     for key, label in metric_labels:

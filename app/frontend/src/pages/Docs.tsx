@@ -68,9 +68,9 @@ docker run -d -p 5001:5000 \\
           <div className="docs-card">
             <h3>Plan</h3>
             <p>
-              Real-world planning mode. Input current inventory, optionally provide
-              last period's demand, and generate specific shipment and procurement
-              orders for the next cycle.
+              Real-world planning mode. Input current inventory and the period's budget,
+              optionally provide this cycle's order request, and generate specific shipment
+              and procurement orders for the next cycle.
             </p>
           </div>
         </div>
@@ -124,6 +124,7 @@ docker run -d -p 5001:5000 \\
             <tbody>
               <tr><td>POST</td><td>/api/optimize</td><td>Run multi-period simulation</td></tr>
               <tr><td>POST</td><td>/api/plan</td><td>Generate single-period shipment plan</td></tr>
+              <tr><td>POST</td><td>/api/forecast-cost</td><td>Spend that serves one period's forecast in full (reference for setting a budget)</td></tr>
             </tbody>
           </table>
         </div>

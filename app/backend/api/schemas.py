@@ -11,7 +11,7 @@ class OptimizationRequest(BaseModel):
     kappa: float = Field(10.0, gt=0, description="Negative binomial dispersion")
     gamma: float = Field(10.0, ge=0, description="Robustness budget (Gamma)")
     transport_cost_per_km: float = Field(0.5, ge=0)
-    shortage_penalty: float = Field(5.0, ge=0, description="Shortage penalty as multiplier of procurement cost per drug")
+    budget: float = Field(..., ge=0, description="Budget per period for transport + procurement spend (BWP). Unmet demand is minimized first within it.")
     holding_cost: float = Field(0.1, ge=0)
     supply_multiplier: float = Field(0.0, ge=0)
     seed: int = Field(42)
@@ -44,7 +44,7 @@ class PlanningRequest(BaseModel):
     kappa: float = Field(10.0, gt=0)
     gamma: float = Field(10.0, ge=0)
     transport_cost_per_km: float = Field(0.5, ge=0)
-    shortage_penalty: float = Field(5.0, ge=0, description="Multiplier of procurement cost")
+    budget: float = Field(..., ge=0, description="Budget per period for transport + procurement spend (BWP). Unmet demand is minimized first within it.")
     holding_cost: float = Field(0.1, ge=0)
     use_cms_data: bool = Field(True)
     initial_inventory: dict[str, dict[str, float]] | None = Field(
@@ -66,6 +66,20 @@ class PlanningRequest(BaseModel):
         gt=0,
         description="Override per-arc shipment capacity (units/trip). Defaults to instance value.",
     )
+
+
+class ForecastCostRequest(BaseModel):
+    """Inputs that change the cost of serving the forecast, mirroring /optimize and /plan."""
+    region: str = Field(..., description="DHMT region name")
+    scenario: str = Field("2526", description="CMS scenario: 2526 | 2627")
+    use_cms_data: bool = Field(True)
+    kappa: float = Field(10.0, gt=0)
+    transport_cost_per_km: float = Field(0.5, ge=0)
+    holding_cost: float = Field(0.1, ge=0)
+    demand_multiplier: float = Field(1.0, ge=0)
+    custom_demand: dict[str, dict[str, float]] | None = None
+    custom_prices: dict[str, float] | None = None
+    arc_cap: float | None = Field(None, gt=0)
 
 
 class FacilitySummary(BaseModel):

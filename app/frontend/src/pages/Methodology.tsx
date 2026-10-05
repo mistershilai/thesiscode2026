@@ -28,20 +28,25 @@ export default function Methodology() {
       </div>
 
       <div className="docs-section">
-        <h2>Objective Function</h2>
+        <h2>Objective and Budget</h2>
         <div className="docs-card">
           <p style={{ color: "#94a3b8", lineHeight: 1.7 }}>
-            The model minimizes the total cost across transportation, shortage penalties, holding
-            costs, and procurement:
+            Each period, the agency has a budget <em>B</em> for transport and procurement.
+            The model minimizes unmet demand first and, among plans that tie on unmet demand,
+            minimizes cost:
           </p>
-          <pre className="docs-code">{`min  v · Σ Dist(i,j) · λ(i,j)        (transport)
-   + Σ Δ(n,k) · U(n,k)              (shortage penalty)
+          <pre className="docs-code">{`min  ω · Σ U(n,k)                    (unmet demand, ranked first)
+   + v · Σ Dist(i,j) · λ(i,j)        (transport)
    + h · Σ I(n,k)                    (holding cost)
-   + Σ c(k) · q(k)                   (procurement)`}</pre>
+   + Σ c(k) · q(k)                   (procurement)
+
+s.t. v · Σ Dist(i,j) · λ(i,j) + Σ c(k) · q(k)  ≤  B`}</pre>
           <p style={{ color: "#64748b", fontSize: "0.85rem", marginTop: "0.5rem" }}>
-            Where <em>v</em> is per-km transport cost, <em>&Delta;</em> is the shortage
-            penalty (set as a multiplier of procurement cost per drug), <em>h</em> is holding
-            cost per unit, and <em>c(k)</em> is the unit procurement cost from CMS data.
+            Where <em>v</em> is per-km transport cost, <em>h</em> is holding cost per unit,
+            <em> c(k)</em> is the unit procurement cost from CMS data, and <em>&omega;</em> is a
+            priority weight set above every unit cost, so no saving in cost is ever preferred
+            over serving a unit of demand. No price is put on a stockout. When the budget cannot
+            cover all demand, the model decides where the shortfall falls.
           </p>
         </div>
       </div>
@@ -56,6 +61,14 @@ export default function Methodology() {
             <p>
               End-of-period inventory equals beginning inventory plus net shipments minus
               realized demand, with any shortfall captured by the unmet demand variable.
+            </p>
+          </div>
+          <div className="docs-card">
+            <h3>Budget</h3>
+            <pre className="docs-code">{`transport + procurement ≤ B`}</pre>
+            <p>
+              Spend on vehicle trips and CMS procurement in a period cannot exceed that
+              period's budget. Holding cost is not charged to the budget.
             </p>
           </div>
           <div className="docs-card">
@@ -120,9 +133,11 @@ where |ξ(n,k)| ≤ σ(n,k)
             <h3>2. Static Robust</h3>
             <p>
               Hedges against worst-case demand within the uncertainty set. Decisions are fixed
-              upfront and cannot adapt once shipments are dispatched. The robust counterpart
-              is derived via LP duality, introducing dual variables (&theta;, &pi;) that
-              enforce feasibility for all demand realizations within the budget.
+              upfront and cannot adapt once shipments are dispatched. Demand enters only the
+              inventory balance, so that is the constraint made robust. LP duality introduces
+              dual variables (&theta;, &pi;) that enforce it for every demand realization in the
+              uncertainty set. Shipping feasibility involves no demand under fixed shipments and
+              stays as in the nominal model.
             </p>
             <pre className="docs-code">{`Γ·θ + Σ(π+ + π-) ≤ rhs
 θ + π+(n) ≥ -σ(n,k)
@@ -140,8 +155,8 @@ where |ξ(n,k)| ≤ σ(n,k)
               The solver jointly optimizes base shipments <em>F&#772;</em> and response
               coefficients <em>&alpha;</em>. When demand at a destination deviates from
               forecast, the adaptive rule automatically adjusts the shipment quantity. This
-              is the most powerful strategy, typically achieving the lowest unmet demand at
-              only a marginal cost increase over static robust.
+              is the most powerful strategy, typically achieving the lowest unmet demand with
+              the same budget.
             </p>
           </div>
         </div>
@@ -197,10 +212,11 @@ where |ξ(n,k)| ≤ σ(n,k)
         <div className="docs-card">
           <p style={{ color: "#94a3b8", lineHeight: 1.7 }}>
             Planning mode solves a single-period version of the optimization with user-supplied
-            initial inventory. Instead of simulating demand draws, it solves one decision epoch
-            and returns specific shipment and procurement recommendations. If last-period
-            demand is provided, it replaces the CMS-derived forecast as the mean, allowing the
-            model to adapt to the most recent consumption signal.
+            initial inventory and budget. Instead of simulating demand draws, it solves one
+            decision epoch and returns specific shipment and procurement recommendations. If
+            this cycle's order request is provided, the committed plan is evaluated against it
+            afterwards to report realized unmet demand and holding. The plan itself is computed
+            from the forecast and never sees the order request.
           </p>
         </div>
       </div>

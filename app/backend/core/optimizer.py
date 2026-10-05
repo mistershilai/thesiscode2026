@@ -1,6 +1,11 @@
 """
 optimizer.py: Supply chain optimization models (Nominal, Static Robust, ADR).
 Extracted from national_pipeline/run_cms_two.py and scripts/run_compare_strategies.py.
+
+Budget model (paper Section 2.2): every strategy minimizes unmet demand first and
+cost second, subject to a per-period cap on transport + procurement spend. The
+priority weight UNMET_PRIORITY exceeds every unit cost, so no saving in cost is
+ever preferred over serving a unit of demand.
 """
 
 import logging
@@ -14,6 +19,10 @@ import pandas as pd
 from scipy.spatial import cKDTree
 
 log = logging.getLogger(__name__)
+
+# Weight on unmet demand in the lexicographic objective. Must exceed the most
+# expensive unit cost (CMS prices top out near 2,800 BWP).
+UNMET_PRIORITY = 1e4
 
 from .data_loader import app_data, clean_fac_name
 
@@ -385,7 +394,7 @@ def run_simulation(
     kappa: float = 10.0,
     Gamma: float = 10.0,
     transport_cost_per_km: float = 0.5,
-    shortage_penalty: float = 10.0,
+    budget: Optional[float] = None,
     holding_cost: float = 0.1,
     procurement_cost=0.0,
     supply_multiplier: float = 0.0,
@@ -395,6 +404,7 @@ def run_simulation(
     Run a simulation for a given strategy and return period-level metrics.
 
     strategy: "nominal" | "static_robust" | "adr"
+    budget:   cap on transport + procurement spend per period (BWP); None = no cap
     """
     nodes = list(instance["nodes"])
     arcs = list(instance["arcs"])
@@ -415,7 +425,6 @@ def run_simulation(
     )
     c_arc = np.array([float(dist_km.loc[i, j]) for (i, j) in arcs], dtype=float)
     c_proc = _resolve_costs(procurement_cost, classes)
-    c_pen = _resolve_costs(shortage_penalty, classes)
 
     mu_np = mu_mat.reindex(index=nodes, columns=classes).fillna(0.0).astype(float).to_numpy()
     sigma_np = sigma_mat.reindex(index=nodes, columns=classes).fillna(0.0).astype(float).to_numpy()
@@ -476,20 +485,17 @@ def run_simulation(
         theta = cp.Variable((N, K), nonneg=True)
         pi_plus = cp.Variable((N, K), nonneg=True)
         pi_minus = cp.Variable((N, K), nonneg=True)
-        theta_ship = cp.Variable((N, K), nonneg=True)
-        pi_ship_plus = cp.Variable((N, K), nonneg=True)
-        pi_ship_minus = cp.Variable((N, K), nonneg=True)
 
         rhs = I0_param + net_flow + supply - mu_np + u - I1
-        rhs_ship = I0_param + net_flow + supply
 
+        # Robust inventory balance (demand enters here). Shipment availability
+        # contains no demand under fixed shipments, so its robust counterpart is
+        # the deterministic constraint itself (paper Section 4.2).
         constraints += [
             Gamma * theta + pi_plus + pi_minus <= rhs,
             theta + pi_plus >= -sigma_np,
             theta + pi_minus >= sigma_np,
-            Gamma * theta_ship + pi_ship_plus + pi_ship_minus <= rhs_ship,
-            theta_ship + pi_ship_plus >= -sigma_np,
-            theta_ship + pi_ship_minus >= sigma_np,
+            A_out @ F <= I0_param + A_in @ F + supply,
         ]
 
     elif strategy == "adr":
@@ -583,11 +589,17 @@ def run_simulation(
                 >= -cp.multiply(alpha[A_adapt, :], sigma_np[dst_adapt, :]),
         ]
 
+    transport_expr = transport_cost_per_km * cp.sum(cp.multiply(c_arc, lam))
+    procurement_expr = cp.sum(cp.multiply(c_proc, q))
+    if budget is not None:
+        constraints.append(transport_expr + procurement_expr <= float(budget))
+
+    # Lexicographic: unmet demand first, then real cost.
     obj = cp.Minimize(
-        transport_cost_per_km * cp.sum(cp.multiply(c_arc, lam))
-        + cp.sum(cp.multiply(c_pen.reshape(1, K), u))
+        UNMET_PRIORITY * cp.sum(u)
+        + transport_expr
         + holding_cost * cp.sum(I1)
-        + cp.sum(cp.multiply(c_proc, q))
+        + procurement_expr
     )
     t0 = time.perf_counter()
     prob = cp.Problem(obj, constraints)
@@ -605,9 +617,9 @@ def run_simulation(
             metrics.append({
                 "t": t, "status": prob.status,
                 "objective": None, "transport_cost": None,
-                "shortage_cost": None, "holding_cost": None,
-                "procurement_cost": None, "unmet_pct": None,
-                "total_unmet": None, "total_demand": None,
+                "holding_cost": None, "procurement_cost": None,
+                "spend": None, "budget": budget, "budget_used_pct": None,
+                "unmet_pct": None, "total_unmet": None, "total_demand": None,
             })
             continue
 
@@ -640,7 +652,6 @@ def run_simulation(
         I = pd.DataFrame(I_next_np, index=nodes, columns=classes)
 
         transport_cost = transport_cost_per_km * float((c_arc * lam_val).sum())
-        shortage_cost = float((unmet_np * c_pen).sum())
         hold_cost = holding_cost * float(I_next_np.sum())
         proc_cost = float((q_val * c_proc).sum())
         total_demand = float(demand_np.sum())
@@ -649,11 +660,13 @@ def run_simulation(
         metrics.append({
             "t": t,
             "status": "optimal",
-            "objective": transport_cost + shortage_cost + hold_cost + proc_cost,
+            "objective": transport_cost + hold_cost + proc_cost,
             "transport_cost": transport_cost,
-            "shortage_cost": shortage_cost,
             "holding_cost": hold_cost,
             "procurement_cost": proc_cost,
+            "spend": transport_cost + proc_cost,
+            "budget": budget,
+            "budget_used_pct": (100.0 * (transport_cost + proc_cost) / budget) if budget else None,
             "unmet_pct": (total_unmet / total_demand * 100.0) if total_demand > 0 else 0.0,
             "total_unmet": total_unmet,
             "total_demand": total_demand,
@@ -670,7 +683,7 @@ def run_planning(
     kappa: float = 10.0,
     Gamma: float = 10.0,
     transport_cost_per_km: float = 0.5,
-    shortage_penalty: float = 10.0,
+    budget: Optional[float] = None,
     holding_cost: float = 0.1,
     procurement_cost=0.0,
     initial_inventory: dict | None = None,
@@ -678,6 +691,8 @@ def run_planning(
 ) -> dict:
     """
     Solve ONE period with real inputs and return actionable shipment decisions.
+
+    budget: cap on this period's transport + procurement spend (BWP); None = no cap
 
     initial_inventory: {facility_name: {drug: quantity}}, current stock on hand
     last_demand:       {facility_name: {drug: quantity}}, last period realized demand
@@ -699,7 +714,6 @@ def run_planning(
     )
     c_arc = np.array([float(dist_km.loc[i, j]) for (i, j) in arcs], dtype=float)
     c_proc = _resolve_costs(procurement_cost, classes)
-    c_pen = _resolve_costs(shortage_penalty, classes)
 
     mu_np = mu_mat.reindex(index=nodes, columns=classes).fillna(0.0).astype(float).to_numpy()
     sigma_np = sigma_mat.reindex(index=nodes, columns=classes).fillna(0.0).astype(float).to_numpy()
@@ -770,19 +784,14 @@ def run_planning(
         theta = cp.Variable((N, K), nonneg=True)
         pi_plus = cp.Variable((N, K), nonneg=True)
         pi_minus = cp.Variable((N, K), nonneg=True)
-        theta_ship = cp.Variable((N, K), nonneg=True)
-        pi_ship_plus = cp.Variable((N, K), nonneg=True)
-        pi_ship_minus = cp.Variable((N, K), nonneg=True)
 
         rhs = I0_np + net_flow + supply - mu_np + u - I1
-        rhs_ship = I0_np + net_flow + supply
+        # Robust inventory balance; availability stays deterministic (no demand in it).
         constraints += [
             Gamma * theta + pi_plus + pi_minus <= rhs,
             theta + pi_plus >= -sigma_np,
             theta + pi_minus >= sigma_np,
-            Gamma * theta_ship + pi_ship_plus + pi_ship_minus <= rhs_ship,
-            theta_ship + pi_ship_plus >= -sigma_np,
-            theta_ship + pi_ship_minus >= sigma_np,
+            A_out @ F <= I0_np + A_in @ F + supply,
         ]
     elif strategy == "adr":
         arc_df = instance.get("arc_df")
@@ -855,11 +864,17 @@ def run_planning(
                 >= -cp.multiply(alpha[A_adapt, :], sigma_np[dst_adapt, :]),
         ]
 
+    transport_expr = transport_cost_per_km * cp.sum(cp.multiply(c_arc, lam))
+    procurement_expr = cp.sum(cp.multiply(c_proc, q))
+    if budget is not None:
+        constraints.append(transport_expr + procurement_expr <= float(budget))
+
+    # Lexicographic: unmet demand first, then real cost.
     obj = cp.Minimize(
-        transport_cost_per_km * cp.sum(cp.multiply(c_arc, lam))
-        + cp.sum(cp.multiply(c_pen.reshape(1, K), u))
+        UNMET_PRIORITY * cp.sum(u)
+        + transport_expr
         + holding_cost * cp.sum(I1)
-        + cp.sum(cp.multiply(c_proc, q))
+        + procurement_expr
     )
 
     t0 = time.perf_counter()
@@ -878,12 +893,13 @@ def run_planning(
     total_transport_cost = float(transport_cost_per_km * float((c_arc * lam_val).sum()))
     total_procurement_cost = float((c_proc * q_val).sum())
 
-    # Post-hoc realized shortage/holding: apply the committed plan to the
+    # Post-hoc realized unmet demand/holding: apply the committed plan to the
     # user-supplied realized demand. The LP is non-anticipative; it never
     # saw realized_np; α (for ADR) was chosen against the uncertainty set.
     # For ADR, execute F̄ + α·ξ with ξ = D_realized − μ. For deterministic
     # and static_robust, shipment is just F̄.
-    total_shortage_cost = None
+    realized_unmet_units = None
+    realized_unmet_pct = None
     total_holding_cost = None
     if realized_np is not None:
         ship_r = F_val.copy()
@@ -905,7 +921,9 @@ def run_planning(
         served_r = np.minimum(avail_r, realized_np)
         unmet_r = np.maximum(realized_np - served_r, 0.0)
         leftover_r = np.maximum(avail_r - served_r, 0.0)
-        total_shortage_cost = float((unmet_r * c_pen.reshape(1, -1)).sum())
+        realized_unmet_units = float(unmet_r.sum())
+        realized_unmet_pct = (100.0 * realized_unmet_units / float(realized_np.sum())
+                              if realized_np.sum() > 0 else 0.0)
         total_holding_cost = float(holding_cost * leftover_r.sum())
 
     # Build shipment recommendations
@@ -938,7 +956,9 @@ def run_planning(
     # Summary
     total_shipped = float(F_val.sum())
     total_procured = float(q_val.sum())
-    total_cost = float(prob.value) if prob.value is not None else 0.0
+    total_spend = total_transport_cost + total_procurement_cost
+    planned_holding_cost = float(holding_cost * np.maximum(np.asarray(I1.value, dtype=float), 0.0).sum())
+    planned_unmet_units = float(np.maximum(np.asarray(u.value, dtype=float), 0.0).sum())
 
     return {
         "status": "optimal",
@@ -951,11 +971,34 @@ def run_planning(
             "total_units_shipped": round(total_shipped, 1),
             "total_procurement_orders": len(procurement),
             "total_units_procured": round(total_procured, 1),
-            "total_cost": round(total_cost, 2),
+            "total_cost": round(total_spend + planned_holding_cost, 2),
             "total_transport_cost": round(total_transport_cost, 2),
             "total_procurement_cost": round(total_procurement_cost, 2),
+            "total_spend": round(total_spend, 2),
+            "budget": round(float(budget), 2) if budget is not None else None,
+            "budget_used_pct": round(100.0 * total_spend / budget, 1) if budget else None,
+            "planned_unmet_units": round(planned_unmet_units, 1),
             "total_holding_cost": round(total_holding_cost, 2) if total_holding_cost is not None else None,
-            "total_shortage_cost": round(total_shortage_cost, 2) if total_shortage_cost is not None else None,
+            "realized_unmet_units": round(realized_unmet_units, 1) if realized_unmet_units is not None else None,
+            "realized_unmet_pct": round(realized_unmet_pct, 2) if realized_unmet_pct is not None else None,
             "active_routes": int((F_val.sum(axis=1) > 0.5).sum()),
         },
     }
+
+
+def forecast_period_cost(
+    instance: dict,
+    transport_cost_per_km: float = 0.5,
+    holding_cost: float = 0.1,
+    procurement_cost=0.0,
+) -> float:
+    """Reference budget: the least transport + procurement spend that serves one
+    period's forecast demand in full from empty shelves (the paper's B_ref).
+    Solved as one uncapped nominal planning period."""
+    res = run_planning(
+        instance, strategy="nominal", transport_cost_per_km=transport_cost_per_km,
+        budget=None, holding_cost=holding_cost, procurement_cost=procurement_cost,
+    )
+    if res.get("status") != "optimal":
+        raise RuntimeError(f"forecast cost solve failed: {res.get('status')}")
+    return float(res["summary"]["total_spend"])

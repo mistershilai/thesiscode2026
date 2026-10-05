@@ -5,6 +5,7 @@ import type { Region, RegionDemand, OptimizationResult } from "../api/client";
 import ResultsView from "../components/ResultsView";
 import DemandEditor from "../components/DemandEditor";
 import ScenarioManager from "../components/ScenarioManager";
+import BudgetInput from "../components/BudgetInput";
 
 const STRATEGIES = [
   { value: "nominal", label: "Nominal (Mean Demand)" },
@@ -24,7 +25,7 @@ export default function Optimize() {
   const [kappa, setKappa] = useState(10);
   const [gamma, setGamma] = useState(10);
   const [transportCost, setTransportCost] = useState(0.5);
-  const [shortagePenalty, setShortagePenalty] = useState(5);
+  const [budget, setBudget] = useState<number | null>(null);
   const [holdingCost, setHoldingCost] = useState(0.1);
   const [supplyMult, setSupplyMult] = useState(0);
   const [demandMultiplier, setDemandMultiplier] = useState(1.0);
@@ -70,7 +71,7 @@ export default function Optimize() {
     kappa,
     gamma,
     transport_cost_per_km: transportCost,
-    shortage_penalty: shortagePenalty,
+    budget: budget ?? 0,
     holding_cost: holdingCost,
     supply_multiplier: supplyMult,
     seed: 42,
@@ -209,16 +210,24 @@ export default function Optimize() {
             />
           </label>
 
-          <label>
-            Shortage penalty (x procurement cost) <span className="label-tswana">Kotlhao ya tlhaelo</span>
-            <input
-              type="number"
-              min={0}
-              step={0.5}
-              value={shortagePenalty}
-              onChange={(e) => setShortagePenalty(+e.target.value)}
-            />
-          </label>
+          <BudgetInput
+            request={
+              region
+                ? {
+                    region,
+                    scenario,
+                    use_cms_data: true,
+                    kappa,
+                    transport_cost_per_km: transportCost,
+                    holding_cost: holdingCost,
+                    demand_multiplier: demandMultiplier,
+                    custom_demand: customDemand,
+                  }
+                : null
+            }
+            value={budget}
+            onChange={setBudget}
+          />
 
           <label>
             Holding cost ($/unit) <span className="label-tswana">Ditshenyegelo tsa polokelo</span>
@@ -277,14 +286,14 @@ export default function Optimize() {
             <button
               className="btn btn-primary"
               onClick={runOptimization}
-              disabled={loading || !region}
+              disabled={loading || !region || budget == null}
             >
               {loading ? "Running..." : "Run Strategy"}
             </button>
             <button
               className="btn btn-secondary"
               onClick={compareAll}
-              disabled={loading || !region}
+              disabled={loading || !region || budget == null}
             >
               {loading ? "Running..." : "Compare All 3"}
             </button>

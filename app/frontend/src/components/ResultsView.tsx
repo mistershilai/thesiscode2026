@@ -17,7 +17,6 @@ const COST_COMPONENTS = [
   { key: "Procurement", field: "avg_procurement_cost", color: "#10b981" },
   { key: "Transport", field: "avg_transport_cost", color: "#3b82f6" },
   { key: "Holding", field: "avg_holding_cost", color: "#f59e0b" },
-  { key: "Shortage", field: "avg_shortage_cost", color: "#ef4444" },
 ] as const;
 
 const STRATEGY_COLORS: Record<string, string> = {
@@ -41,7 +40,6 @@ export default function ResultsView({ results }: Props) {
     Procurement: true,
     Transport: true,
     Holding: true,
-    Shortage: true,
   });
 
   // Summary comparison table
@@ -85,7 +83,9 @@ export default function ResultsView({ results }: Props) {
             <th>Total Procurement Cost</th>
             <th>Total Transport Cost</th>
             <th>Total Holding Cost</th>
-            <th>Total Shortage Cost</th>
+            <th>Total Spend</th>
+            <th>Budget Used (avg)</th>
+            <th>Periods at Budget</th>
             <th>Periods OK</th>
           </tr>
         </thead>
@@ -111,10 +111,12 @@ export default function ResultsView({ results }: Props) {
                   : "-"}
               </td>
               <td>
-                {s.total_shortage_cost != null
-                  ? `BWP ${Math.round(Number(s.total_shortage_cost)).toLocaleString()}`
+                {s.total_spend != null
+                  ? `BWP ${Math.round(Number(s.total_spend)).toLocaleString()}`
                   : "-"}
               </td>
+              <td>{s.avg_budget_used_pct != null ? `${s.avg_budget_used_pct}%` : "-"}</td>
+              <td>{s.periods_at_budget ?? "-"}</td>
               <td>
                 {s.periods_solved ?? "-"}/{(s.periods_solved ?? 0) + (s.periods_failed ?? 0)}
               </td>

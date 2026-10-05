@@ -8,6 +8,7 @@ import type {
   Shipment,
 } from "../api/client";
 import ConfirmModal from "../components/ConfirmModal";
+import BudgetInput from "../components/BudgetInput";
 
 const STRATEGIES = [
   { value: "nominal", label: "Nominal" },
@@ -21,7 +22,7 @@ export default function Planning() {
   const [strategy, setStrategy] = useState("static_robust");
   const [scenario, setScenario] = useState("2526");
   const [gamma, setGamma] = useState(10);
-  const [shortagePenalty, setShortagePenalty] = useState(5);
+  const [budget, setBudget] = useState<number | null>(null);
   const [transportCostPerKm, setTransportCostPerKm] = useState(0.5);
   const [holdingCost, setHoldingCost] = useState(0.1);
   const [arcCap, setArcCap] = useState(2000);
@@ -152,7 +153,7 @@ export default function Planning() {
         kappa: 10,
         gamma,
         transport_cost_per_km: transportCostPerKm,
-        shortage_penalty: shortagePenalty,
+        budget: budget ?? 0,
         holding_cost: holdingCost,
         use_cms_data: true,
         initial_inventory: Object.keys(inventory).length > 0 ? inventory : null,
@@ -170,7 +171,7 @@ export default function Planning() {
 
   // When "round up" is toggled, apply ceil() to all shipment/procurement
   // quantities and recompute procurement cost + unit totals. Transport,
-  // holding, shortage are unchanged (unit totals are counts, not costs
+  // holding, unmet demand are unchanged (unit totals are counts, not costs
   // tied to the LP's λ decisions).
   const displayed = result
     ? (() => {
@@ -251,11 +252,24 @@ export default function Planning() {
               onChange={(e) => setGamma(+e.target.value)} />
           </label>
 
-          <label>
-            Shortage penalty (x cost) <span className="label-tswana">Kotlhao ya tlhaelo</span>
-            <input type="number" min={0} step={0.5} value={shortagePenalty}
-              onChange={(e) => setShortagePenalty(+e.target.value)} />
-          </label>
+          <BudgetInput
+            request={
+              region
+                ? {
+                    region,
+                    scenario,
+                    use_cms_data: true,
+                    kappa: 10,
+                    transport_cost_per_km: transportCostPerKm,
+                    holding_cost: holdingCost,
+                    custom_prices: Object.keys(customPrices).length > 0 ? customPrices : null,
+                    arc_cap: arcCap,
+                  }
+                : null
+            }
+            value={budget}
+            onChange={setBudget}
+          />
 
           <label>
             Transport cost (BWP/km) <span className="label-tswana">Tlhwatlhwa ya dipalangwa</span>
@@ -288,7 +302,7 @@ export default function Planning() {
                 <span className="label-tswana">Sekaseka kopo ya jaanong</span>
               </label>
               <span className="param-hint">
-                Compute realized shortage & holding by applying the committed plan to this cycle's
+                Compute realized unmet demand & holding by applying the committed plan to this cycle's
                 actual order quantities (post-hoc, non-anticipative).
               </span>
             </div>
@@ -733,7 +747,7 @@ export default function Planning() {
             <button
               className="btn btn-primary"
               onClick={runPlan}
-              disabled={loading || !region}
+              disabled={loading || !region || budget == null}
             >
               {loading ? "Solving..." : "Generate Plan"}
             </button>
@@ -806,7 +820,7 @@ export default function Planning() {
                   <p className="param-hint" style={{ marginBottom: "0.75rem" }}>
                     Enter the realized order request from facilities this cycle. The plan was committed
                     against the forecast before this was known — we evaluate the committed plan against
-                    these realized quantities to report actual shortage and holding.
+                    these realized quantities to report actual unmet demand and holding.
                   </p>
                   <div className="demand-table-wrapper" style={{ maxHeight: "300px" }}>
                     <table className="demand-table">
@@ -957,12 +971,34 @@ export default function Planning() {
                     <div className="stat-label">Realized Holding Cost</div>
                   </div>
                 )}
-                {displayed.summary.total_shortage_cost != null && (
+                <div className="stat-card">
+                  <div className="stat-value">
+                    BWP {Math.round(displayed.summary.total_spend).toLocaleString()}
+                    {displayed.summary.budget_used_pct != null && (
+                      <span style={{ fontSize: "0.6em", marginLeft: "0.4em" }}>
+                        ({displayed.summary.budget_used_pct}% of budget)
+                      </span>
+                    )}
+                  </div>
+                  <div className="stat-label">Spend (transport + procurement)</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-value">
+                    {Math.round(displayed.summary.planned_unmet_units).toLocaleString()}
+                  </div>
+                  <div className="stat-label">Planned Unmet Demand (units, worst case)</div>
+                </div>
+                {displayed.summary.realized_unmet_units != null && (
                   <div className="stat-card">
                     <div className="stat-value">
-                      BWP {Math.round(displayed.summary.total_shortage_cost).toLocaleString()}
+                      {Math.round(displayed.summary.realized_unmet_units).toLocaleString()}
+                      {displayed.summary.realized_unmet_pct != null && (
+                        <span style={{ fontSize: "0.6em", marginLeft: "0.4em" }}>
+                          ({displayed.summary.realized_unmet_pct}%)
+                        </span>
+                      )}
                     </div>
-                    <div className="stat-label">Realized Shortage Cost</div>
+                    <div className="stat-label">Realized Unmet Demand (units)</div>
                   </div>
                 )}
               </div>

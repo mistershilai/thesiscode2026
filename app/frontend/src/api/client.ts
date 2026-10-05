@@ -63,7 +63,7 @@ export interface OptimizationRequest {
   kappa: number;
   gamma: number;
   transport_cost_per_km: number;
-  shortage_penalty: number;
+  budget: number; // BWP per period, transport + procurement
   holding_cost: number;
   supply_multiplier: number;
   seed: number;
@@ -84,9 +84,11 @@ export interface PeriodMetric {
   status: string;
   objective: number | null;
   transport_cost: number | null;
-  shortage_cost: number | null;
   holding_cost: number | null;
   procurement_cost: number | null;
+  spend: number | null;
+  budget: number | null;
+  budget_used_pct: number | null;
   unmet_pct: number | null;
   total_unmet: number | null;
   total_demand: number | null;
@@ -115,7 +117,7 @@ export interface PlanningRequest {
   kappa: number;
   gamma: number;
   transport_cost_per_km: number;
-  shortage_penalty: number;
+  budget: number; // BWP per period, transport + procurement
   holding_cost: number;
   use_cms_data: boolean;
   initial_inventory: Record<string, Record<string, number>> | null;
@@ -154,10 +156,28 @@ export interface PlanningResult {
     total_cost: number;
     total_transport_cost: number;
     total_procurement_cost: number;
+    total_spend: number;
+    budget: number | null;
+    budget_used_pct: number | null;
+    planned_unmet_units: number;
     total_holding_cost: number | null;
-    total_shortage_cost: number | null;
+    realized_unmet_units: number | null;
+    realized_unmet_pct: number | null;
     active_routes: number;
   };
+}
+
+export interface ForecastCostRequest {
+  region: string;
+  scenario: string;
+  use_cms_data: boolean;
+  kappa: number;
+  transport_cost_per_km: number;
+  holding_cost: number;
+  demand_multiplier?: number;
+  custom_demand?: Record<string, Record<string, number>> | null;
+  custom_prices?: Record<string, number> | null;
+  arc_cap?: number | null;
 }
 
 export const api = {
@@ -195,6 +215,12 @@ export const api = {
     }),
   plan: (req: PlanningRequest) =>
     fetchJSON<PlanningResult>("/plan", {
+      method: "POST",
+      body: JSON.stringify(req),
+    }),
+  // Spend that serves one period's forecast in full: the reference for a budget.
+  forecastCost: (req: ForecastCostRequest) =>
+    fetchJSON<{ region: string; scenario: string; forecast_cost: number }>("/forecast-cost", {
       method: "POST",
       body: JSON.stringify(req),
     }),
