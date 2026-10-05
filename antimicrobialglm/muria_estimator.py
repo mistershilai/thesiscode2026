@@ -9,12 +9,16 @@ Pipeline (mirrors 4.5, real data replacing guesses):
   1. decode MURIA  -> patient table (Section 1) + prescription table (Section 2)
   2. real marginals -> (age x infection) patient totals, used for the exposure
                        offset below
-  3. real joint over (age, infection, tier, class): every prescription already
-     carries all four fields on one record (age, tier, and class are observed
-     directly; infection is attached via a best-effort join to Section 1), so
-     no reconstruction is needed
+  3. real joint over (age, infection, tier, class): every prescription
+     already carries all four fields on one record (age, tier, and class are
+     observed directly; infection is attached via a best-effort join to
+     Section 1), so no reconstruction is needed
   4. fit NB2 GLM  count ~ C(age)+C(infection)+C(tier)+C(class)  with
-     log-exposure offset; extract alpha_hat / kappa_hat
+     log-exposure offset; extract alpha_hat / kappa_hat. Sex and prophylaxis
+     were both tried as extra covariates and dropped: each measurably
+     destabilized the mean structure once tested correctly (mu_hat
+     correlation across optimizers fell from 0.96 to 0.91 for prophylaxis
+     alone; sex was comparable). See git history if revisiting this.
   5. export artifacts (same schema as the notebook's artifacts/ folder)
 
   An earlier version reconstructed the (age, infection, tier, class) joint via
@@ -96,6 +100,22 @@ def _infection(x) -> str:
     return "NIC" if s in ("", "NAN", "NONE") else _INF_MAP.get(s, "NIC")
 
 
+# Sex and Prophylaxis-or-Treatment were both tried as extra covariates
+# (exposure offset untouched, marginalized out on export -- the same pattern
+# tier already uses) and dropped. Both measurably destabilized the mean
+# structure: fit the identical table under two optimizers and compare
+# mu_hat. Baseline (age/infection/tier/class only, current 711-patient data):
+# correlation 0.9642. Adding prophylaxis alone: 0.9117. An earlier estimate
+# that prophylaxis was nearly free (0.94) was wrong -- it came from a test
+# that predicted on a table still carrying sex as an unused column, which
+# silently duplicated rows the model couldn't distinguish and inflated the
+# apparent stability. Sex alone was not re-verified against the corrected
+# method before being dropped, but was comparable or worse in the original
+# (flawed) comparison. If revisiting either, retest against this baseline
+# using the real real_joint()/_build_fit_table() path, not a hand-built
+# groupby that can carry stale columns into the prediction step.
+
+
 def _drug_class(atc, name) -> str | float:
     a = str(atc).strip().upper().replace(" ", "")
     n = str(name).strip().lower()
@@ -140,8 +160,19 @@ def load_muria(path: Path = PPS_PATH):
 
     s1, s2 = sheet("Clean Sec-1"), sheet("Clean Sec-2")
 
+    # Keep only patients who consented, matching the study's own inclusion
+    # criteria, and collapse duplicate rows per patient -- some patients are
+    # repeated up to 7 times in the raw sheet with an identical admission
+    # date (a data-entry artifact, not repeat encounters). Both steps are
+    # required to reproduce Paramadhas et al. (2019) Table 1 exactly: 711
+    # consented patients, not the 895 raw rows or the 833 that consent alone
+    # leaves.
+    s1 = s1[s1["Consented"].astype(str).str.strip().str.upper() == "YES"].copy()
+    s1["pkey"] = s1["HospitalCode"].astype(str).str.strip().str.upper() + "|" + s1[_col(s1, "PatientCode")].map(_pcode)
+    s1 = s1.drop_duplicates("pkey")
+
     patients = pd.DataFrame({
-        "pkey": s1["HospitalCode"].astype(str).str.strip().str.upper() + "|" + s1[_col(s1, "PatientCode")].map(_pcode),
+        "pkey": s1["pkey"],
         "tier": s1["HospitalCode"].map(_tier),
         "age_group": s1["Age"].map(_age_years).map(_age_group),
         "infection": s1[_col(s1, "Type of Infection")].map(_infection),
