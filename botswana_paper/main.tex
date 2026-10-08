@@ -101,12 +101,11 @@ We formulate a multi-echelon, multi-period allocation model with static and adju
 A dualization and a district decomposition give a mixed-integer program that scales to 614 facilities across 18 districts.
 On tree networks, affine rules attain the minimum budget guaranteeing zero unmet demand among rules in which each shipment sees its destination's demand, and the budget they save over a static policy grows with demand variability and shrinks with the uncertainty budget.
 Demand comes from a Medical Demand Estimator calibrated to catchment populations and point-prevalence-survey data.
-On simulations driven by real Central Medical Stores procurement records, the adaptive policy reduces average unmet demand by 84--86\% relative to a deterministic baseline and 52--54\% relative to static robust optimization, at a procurement premium of 1.0\% under illustrative unit costs and 6.4--6.5\% under actual prices.
+On simulations driven by real Central Medical Stores procurement records, the adaptive policy reduces average unmet demand by 95--96\% relative to a deterministic baseline and 84--86\% relative to static robust optimization, at a procurement premium of 2.0\% under illustrative unit costs and 6.7--7.0\% under actual prices.
 \noindent
 \textit{Managerial implications.}
 Adaptive recourse lifts service in every district, including the worst-served, for a modest procurement premium, its value is largest where demand is most variable, and it requires a budget that roughly covers the cost of serving the forecast.
 Every policy serves demand first and spends second within the same budget, so results do not hinge on a shortage price.
-\mynote{update numbers to the budget-model runs, add the budget-sweep finding if it fits}
 A working decision-support prototype implements the framework.
 \end{abstract}
 
@@ -531,7 +530,6 @@ The headline runs use $f = 1.25$.
 The policies therefore face the same cap, not the same spend: a policy may leave part of its budget unused, and \Sec\ref{sec:sensitivity} varies $f$.
 We set $\omega = 10^4$, above the largest unit price in the CMS records (2{,}800 BWP), so the priority on unmet demand holds for every product.
 Each vehicle trip carries up to $2{,}000$ units, $M = 10^5$, and we impose no storage cap.
-\mynote{numbers, tables, figures below: update to the budget-model runs}
 
 \subsection{Gaborone Proof-of-Concept}
 \label{sec:gaborone}
@@ -617,16 +615,17 @@ ARO-ADR        & 1.43  & 24{,}325 & 25{,}523 \\
 To test the policies on empirically grounded costs rather than illustrative ones, we drive the model with CMS's actual records for 84 antimicrobial products: average monthly consumption for the 2025--26 and 2026--27 planning horizons, and unit prices from CMS pricing records.
 We simulate all 18 districts.
 Table~\ref{tab:cms} reports the results.
-The policy ordering is unchanged, and the coverage gains are if anything larger: ARO-ADR cuts unmet demand from 21.7\% (deterministic) to 3.4\% in 2025--26 and from 19.2\% to 2.8\% in 2026--27.
-The procurement premium of ARO-ADR over static robust is now 6.5\% and 6.4\%, against 1.0\% under illustrative costs, because the premium is a ratio of spend: under actual prices each extra unit is weighted by its product's price rather than counted equally.
-\mynote{shortages are no longer priced: compare service at equal budget instead of total objective}
+The policy ordering is unchanged, and the coverage gains are larger: ARO-ADR cuts unmet demand from 20.4\% (deterministic) to 1.0\% in 2025--26 and from 18.2\% to 0.8\% in 2026--27.
+The procurement premium of ARO-ADR over static robust is now 7.0\% and 6.7\%, against 2.0\% under illustrative costs, because the premium is a ratio of spend: under actual prices each extra unit is weighted by its product's price rather than counted equally.
+The three policies face the same budget and use different shares of it: about 60\% under deterministic planning, 74\% under static robust, and 79\% under ARO-ADR.
+The additional spend becomes service at close to the cost of the drugs: each extra unit ARO-ADR serves relative to the deterministic policy takes about 35 BWP of spend in 2025--26 and 30 BWP in 2026--27, against an average of 23 and 21 BWP per unit procured.
 The geographic pattern (Figure~\ref{fig:cmsmap}) mirrors the simulation.
-In 2025--26 the deterministic policy leaves North East, Ghanzi and Kgalagadi South at $29.6\%$, $27.2\%$ and $26.7\%$ unmet, and ARO-ADR brings the worst-served district to $4.6\%$.
-Shortfalls shrink almost proportionally rather than being redistributed, so the gain is a uniform improvement in level rather than a reduction in relative inequality.
+In 2025--26 the deterministic policy leaves North East, Ghanzi and Kgalagadi South at $28.5\%$, $25.9\%$ and $25.4\%$ unmet, and ARO-ADR brings the worst-served district to $2.0\%$.
+Shortfalls shrink in every district rather than being redistributed.
 Figure~\ref{fig:equity} applies the criterion of \Sec\ref{sec:equity}.
-In both scenarios the sorted service vectors dominate component by component, by at least $2.3$ percentage points from static robust to ARO-ADR and $10.9$ from deterministic to static robust.
+In both scenarios the sorted service vectors dominate component by component, by at least $3.9$ percentage points from static robust to ARO-ADR and $10.7$ from deterministic to static robust.
 The ranking is therefore the same under every $\alpha$: choosing a policy requires no position on how to weigh the worst-served district.
-The margin nonetheless widens with $\alpha$, from $18.4$ percentage points of equivalent service at $\alpha = 0$ to $25.0$ under max-min, since ARO-ADR's district service levels sit close together while the deterministic ones spread out.
+The margin nonetheless widens with $\alpha$, from $19.5$ percentage points of equivalent service at $\alpha = 0$ to $26.4$ under max-min in 2025--26, since ARO-ADR's district service levels sit close together while the deterministic ones spread out.
 A disaggregated breakdown by cost component and district is given in Section~EC.5.
 
 \begin{figure}[t]
@@ -638,19 +637,19 @@ A disaggregated breakdown by cost component and district is given in Section~EC.
 
 \begin{table}[t]
 \centering
-\caption{Real CMS procurement data: average unmet demand (\%), procurement cost (BWP), and objective by model and scenario across all 18 districts.}
+\caption{Real CMS procurement data: average unmet demand (\%), procurement cost (BWP), and share of the budget used, by model and scenario across all 18 districts.}
 \label{tab:cms}
 \begin{tabular}{llrrr}
 \toprule
-Scenario & Model & Avg.\ unmet (\%) & Avg.\ procurement & Avg.\ objective \\
+Scenario & Model & Avg.\ unmet (\%) & Avg.\ procurement & Budget used (\%) \\
 \midrule
-2025--26 & Deterministic & 21.72 & 143{,}445.95 & 407{,}746.36 \\
-         & Static robust & 7.05  & 182{,}194.06 & 274{,}824.08 \\
-         & ARO-ADR       & 3.40  & 194{,}026.78 & 216{,}719.85 \\
+2025--26 & Deterministic & 20.42 & 147{,}113 & 59.0 \\
+         & Static robust & 6.31  & 185{,}401 & 74.3 \\
+         & ARO-ADR       & 0.99  & 198{,}316 & 79.5 \\
 \midrule
-2026--27 & Deterministic & 19.17 & 208{,}293.50 & 532{,}339.06 \\
-         & Static robust & 5.98  & 252{,}237.42 & 361{,}051.61 \\
-         & ARO-ADR       & 2.76  & 268{,}293.00 & 294{,}511.09 \\
+2026--27 & Deterministic & 18.20 & 213{,}140 & 61.0 \\
+         & Static robust & 5.38  & 258{,}199 & 73.9 \\
+         & ARO-ADR       & 0.78  & 275{,}476 & 78.9 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -693,7 +692,7 @@ A stockout leaves an infection untreated or forces second-line therapy, at an at
 The one money input left is the budget, so we vary the factor $f$ over $[0.5, 2]$ (Section~EC.5).
 At $f = 1$ the cap is exactly the spend that serves the forecast.
 Below $1$ it forces shortfalls even at nominal demand, and above $1$ it leaves room to hedge.
-Robustness pays only once the budget covers the forecast.
+Robust planning reduces unmet demand only once the budget covers the forecast.
 At $f \le 0.75$ every policy leaves a quarter to a half of demand unmet, the three policies are within about $2$ percentage points of one another, and the deterministic policy is best in five of the six cases, consistent with the robust policies diverting scarce money to safety stock that ends up where demand does not materialize.
 The usual ordering holds at every $\kappa$ from $f = 1$, and at $f = 0.9$ except at $\kappa = 25$.
 Above that the ARO-ADR advantage grows quickly: at $\kappa = 10$, unmet demand at $f = 1$ is $13.3\%$, $5.8\%$ and $5.0\%$ for the three policies, and at $f = 1.25$ it is $13.3\%$, $3.6\%$ and $0.9\%$.
@@ -713,8 +712,7 @@ We report it as a stress test of the policies, not as a result about resistance.
 
 \paragraph{What an agency should take away.}
 Three findings are directly actionable.
-First, adaptive recourse is worth adopting: within the same budget, it cuts unmet demand by 84--86\% relative to planning on the forecast alone.
-\mynote{update the reduction}
+First, adaptive recourse is worth adopting: within the same budget, it cuts unmet demand by 95--96\% relative to planning on the forecast alone.
 Second, the gains are broad rather than concentrated: solving per district lifts every district's service level, including the worst-served, so an agency does not trade rural coverage for urban.
 The improvement is in the level of service everywhere, not in the relative dispersion across districts, and \Sec\ref{sec:equity} makes that distinction precise.
 Third, calibration is forgiving in the ways that matter and demanding in the ways one can prepare for.

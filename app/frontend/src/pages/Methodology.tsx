@@ -166,7 +166,8 @@ where |ξ(n,k)| ≤ σ(n,k)
         <h2>Key Results from Research</h2>
         <div className="docs-card">
           <p style={{ color: "#94a3b8", lineHeight: 1.7, marginBottom: "0.5rem" }}>
-            Across national simulations spanning 18 districts and 84 antimicrobial products:
+            Across all 18 districts and 84 antimicrobial products, with every strategy given the
+            same per-period budget (1.25 times the cost of serving the forecast):
           </p>
           <table className="facility-table" style={{ marginTop: "0.75rem" }}>
             <thead>
@@ -174,35 +175,36 @@ where |ξ(n,k)| ≤ σ(n,k)
                 <th>Strategy</th>
                 <th>Avg Unmet Demand</th>
                 <th>vs Deterministic</th>
-                <th>Cost Premium</th>
+                <th>Budget Used</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>Nominal</td>
-                <td>~21%</td>
+                <td>20.4%</td>
                 <td>baseline</td>
-                <td>baseline</td>
+                <td>59%</td>
               </tr>
               <tr>
                 <td>Static Robust</td>
-                <td>~6%</td>
-                <td>-70%</td>
-                <td>+12%</td>
+                <td>6.3%</td>
+                <td>-69%</td>
+                <td>74%</td>
               </tr>
               <tr>
                 <td>ADR</td>
-                <td>~3%</td>
-                <td>-85%</td>
-                <td>+13%</td>
+                <td>1.0%</td>
+                <td>-95%</td>
+                <td>80%</td>
               </tr>
             </tbody>
           </table>
           <p style={{ color: "#64748b", fontSize: "0.85rem", marginTop: "0.75rem" }}>
-            Results from CMS-provided procurement data (2025-26 scenario, 11 DHMTs).
-            The ADR policy reduces unmet demand by 85% relative to deterministic planning
-            while incurring only a modest procurement cost premium. Full results and
-            sensitivity analyses are available in the research paper.
+            Results from CMS-provided procurement data (2025-26 scenario, all 18 DHMTs).
+            Within the same budget, the ADR policy reduces unmet demand by 95% relative to
+            deterministic planning, which leaves about 40% of its budget unspent because it
+            plans only for the forecast. Full results and sensitivity analyses are available in
+            the research paper.
           </p>
         </div>
       </div>

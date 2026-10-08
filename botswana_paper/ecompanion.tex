@@ -322,7 +322,7 @@ The allocation models do not anticipate this feedback, which enters through the 
 We present this as a proof-of-concept coupling rather than a validated epidemiological model.
 Several rates in Table~\ref{tab:seir-params} come from a general two-strain model and are slow for an inpatient setting, so the experiment illustrates the feedback mechanism rather than hospital dynamics.
 
-Over two years the ordering is unchanged: ARO-ADR leaves 2.2\% of demand unmet on average, against 3.7\% for static robust and 12.5\% for deterministic (Table~\ref{tab:epi}).
+Over two years the ordering is unchanged: ARO-ADR leaves 2.1\% of demand unmet on average, against 3.7\% for static robust and 12.5\% for deterministic (Table~\ref{tab:epi}).
 In its worst period its shortfall is 21.8\%, against 39.4\% for deterministic.
 Because treatment depends on what arrives, ARO-ADR meets 98.8\% of the hospital's cephalosporin requirement against 91.4\% under deterministic planning, and ends the horizon with fewer infectious patients of both strains.
 The effect on resistance is more subtle.
@@ -401,9 +401,7 @@ At $\kappa = 10$, ARO-ADR reaches $0.9\%$ at $f = 1.25$ and $0.8\%$ at $f = 1.5$
 
 \begin{figure}[!htbp]
     \centering
-    \IfFileExists{figures/budget_sensitivity.pdf}{%
-    \includegraphics[width=0.95\linewidth]{figures/budget_sensitivity}}{%
-    \mynote{budget\_sensitivity not generated yet}}
+    \includegraphics[width=0.95\linewidth]{figures/budget_sensitivity}
     \caption{Realized unmet demand (\%) across policies for varying budget factor $f$ (columns) and dispersion $\kappa$ (rows).}
     \label{fig:budget}
 \end{figure}
@@ -457,23 +455,11 @@ Martingale ($\theta = 0$) & $38.32$ & $28.33$ & $21.16$ & $14.15$ & $11.49$ \\
 The ordering holds in every case, and ARO-ADR remains best.
 Service degrades with persistence because every policy plans on a fixed forecast while demand drifts away from it, and recalibrating the deviation bound recovers about half of that loss under the martingale.
 
-\paragraph{Minimum stock levels.}
-CMS writes stock policy as a minimum cover: an elastic floor requiring every facility to end each period holding at least $\beta$ periods of its nominal demand, swept across $\beta$ (Figure~\ref{fig:floor}).
-Raising $\beta$ from $0$ to $2$ multiplies the deterministic policy's held inventory by $14.3$ and its total cost by $1.33$.
-Its unmet demand falls by $2.2$ percentage points, against $11.5$ points from switching to ARO-ADR with no floor, at $88\%$ of that cost.
-
-\begin{figure}[!htbp]
-    \centering
-    \includegraphics[width=0.95\linewidth]{figures/equity_frontier}
-    \caption{Elastic minimum stock cover $\beta$ swept across policies. \textbf{Left:} total cost over the horizon. \textbf{Right:} mean unmet demand.}
-    \label{fig:floor}
-\end{figure}
-
 \paragraph{Disaggregated cost maps.}
-Figures~\ref{fig:cmsfull2526} and~\ref{fig:cmsfull2627} decompose the real-CMS results of Section~6.3 by cost component and district, and Figure~\ref{fig:natmaps} does the same for the national simulation.
-\mynote{maps had shortage-cost and objective rows: update text and captions with the regenerated maps}
-Procurement cost is broadly uniform across districts, and holding cost is higher under the robust policies, which pre-position inventory.
-Kweneng is a transport-cost outlier, shipping nearly Greater Gaborone's volume at about five times the cost per unit.
+Figure~\ref{fig:cmsfull2526} decomposes the 2025--26 real-CMS results of Section~6.3 by cost component and district, and the 2026--27 scenario shows the same pattern.
+Procurement cost per unit is nearly uniform across districts, at $22.3$ to $23.2$ BWP, and holding cost is higher under the robust policies, which pre-position inventory.
+Transport is at most $0.3\%$ of spend in any district.
+Kweneng has the largest transport cost, shipping about four fifths of Greater Gaborone's volume at nearly six times the transport cost per unit, and the sparse districts Kgalagadi North and Tutume cost more per unit still.
 
 \begin{figure}[!htbp]
     \centering
@@ -482,21 +468,21 @@ Kweneng is a transport-cost outlier, shipping nearly Greater Gaborone's volume a
     \label{fig:cmsfull2526}
 \end{figure}
 
-\begin{figure}[!htbp]
+\paragraph{Minimum stock levels.}
+CMS writes stock policy as a minimum cover: an elastic floor requiring every facility to end each period holding at least $\beta$ periods of its nominal demand, swept across $\beta$ (Figure~\ref{fig:floor}).
+Raising $\beta$ from $0$ to $2$ multiplies the deterministic policy's held inventory by $14.3$ and its total cost by $1.33$.
+Its unmet demand falls by $2.2$ percentage points, against $11.5$ points from switching to ARO-ADR with no floor, at $88\%$ of that cost.
+
+\begin{figure}[H]
     \centering
-    \includegraphics[width=0.702\textwidth]{figures/cms_full_metrics_2627}
-    \caption{Real CMS data, 2026--27 scenario: layout as in Figure~\ref{fig:cmsfull2526}.}
-    \label{fig:cmsfull2627}
+    \includegraphics[width=0.95\linewidth]{figures/equity_frontier}
+    \caption{Elastic minimum stock cover $\beta$ swept across policies. \textbf{Left:} total cost over the horizon. \textbf{Right:} mean unmet demand.}
+    \label{fig:floor}
 \end{figure}
 
-\begin{figure}[!htbp]
-    \centering
-    \includegraphics[width=0.702\textwidth]{figures/botswana_appendix_simulation_maps}
-    \caption{National simulation: district-level maps of each cost component under the three policies. District names are omitted, as in the main text.}
-    \label{fig:natmaps}
-\end{figure}
-
-\clearpage
+\begin{singlespace}
+\small
 \bibliography{bibliography}
+\end{singlespace}
 
 \end{document}
