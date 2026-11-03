@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "./auth";
 import Dashboard from "./pages/Dashboard";
 import RegionDetail from "./pages/RegionDetail";
@@ -27,6 +27,9 @@ function AppContent() {
   const location = useLocation();
   const theme = useTheme();
   const isLoginPage = location.pathname === "/login";
+  const [menuOpen, setMenuOpen] = useState(false);
+  // Close the phone menu whenever the page changes.
+  useEffect(() => setMenuOpen(false), [location.pathname]);
 
   // Expose setter globally so Optimize/Planning pages can toggle it
   (window as any).__setSolving = setSolving;
@@ -50,7 +53,15 @@ function AppContent() {
           <KaeloMark />
           kaelo
         </Link>
-        <div className="nav-links">
+        <button
+          className="nav-menu-btn"
+          aria-label="Menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((o) => !o)}
+        >
+          {menuOpen ? "close" : "menu"}
+        </button>
+        <div className={`nav-links${menuOpen ? " open" : ""}`}>
           <Link to="/">Dashboard</Link>
           {user && <Link to="/optimize">Simulate</Link>}
           {user && <Link to="/plan">Plan</Link>}
