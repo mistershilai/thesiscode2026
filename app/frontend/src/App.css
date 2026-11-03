@@ -274,7 +274,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 2rem;
+  /* Bottom padding clears the 10px flag stripe drawn along the bottom edge. */
+  padding: 0.75rem 2rem calc(0.75rem + 10px);
   background: var(--k-rgba-5-10-24-0-7);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -2079,17 +2080,9 @@ body {
   transition: all 0.2s;
 }
 
-/* Phone menu button; shown only in the mobile layout. */
+/* Phone menu button: styled as .nav-logout, shown only in the mobile layout. */
 .nav-menu-btn {
   display: none;
-  background: none;
-  border: 1px solid var(--k-rgba-56-189-248-0-15);
-  color: var(--k-e2e8f0);
-  padding: 0.3rem 0.7rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-family: inherit;
-  cursor: pointer;
 }
 
 .nav-logout:hover {
@@ -2189,7 +2182,7 @@ body {
   /* Top bar: brand, theme toggle and a menu button; the links drop down. */
   .navbar {
     flex-wrap: wrap;
-    padding: 0.6rem 1rem;
+    padding: 0.6rem 1rem calc(0.6rem + 10px);
     gap: 0.5rem;
   }
 

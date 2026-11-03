@@ -54,7 +54,7 @@ function AppContent() {
           kaelo
         </Link>
         <button
-          className="nav-menu-btn"
+          className="nav-logout nav-menu-btn"
           aria-label="Menu"
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((o) => !o)}
