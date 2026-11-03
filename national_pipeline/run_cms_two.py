@@ -1811,9 +1811,11 @@ def forecast_period_cost_cms(inst, relax_integrality=True, transport_cost_per_km
     return float(m["transport_cost_realized"].iloc[0] + m["procurement_cost"].iloc[0])
 
 
-def run_region(region, T=26):
+def run_region(region, T=26, relax_integrality=True):
     """Run both years for one region. Returns (list_of_metric_dicts, error_str_or_None).
-    T is the number of biweekly periods (26 = full year; use a small T for a smoke test)."""
+    T is the number of biweekly periods (26 = full year; use a small T for a smoke test).
+    relax_integrality=False keeps vehicle trips integer in every policy. The budget cap
+    is the same in both cases, so the two runs differ only in the trip variables."""
     kappa = 10.0; seed = 42; Gamma = 10.0
     results = []
     try:
@@ -1832,7 +1834,7 @@ def run_region(region, T=26):
                            procurement_cost_per_unit=inst["proc_cost"],
                            supply_multiplier=0.0, arc_cap=inst["arc_cap"],
                            storage_cap_per_node=inst["storage_cap_per_node"],
-                           solver=SOLVER, verbose=False, relax_integrality=True)
+                           solver=SOLVER, verbose=False, relax_integrality=relax_integrality)
 
             m_det, _, final_I["deterministic"] = simulate_policy_budget_under_draws_cms(
                 **shared, I0_start=final_I["deterministic"])
@@ -1864,6 +1866,10 @@ if __name__ == "__main__":
                         help="biweekly periods per year (26 = full year)")
     parser.add_argument("--out-tag", default="",
                         help="suffix for the output files, e.g. _smoke, so a test never touches the real results")
+    parser.add_argument("--workers", type=int, default=MAX_WORKERS,
+                        help=f"districts solved in parallel (default {MAX_WORKERS}); memory is the limit, not cores")
+    parser.add_argument("--integer-trips", action="store_true",
+                        help="keep vehicle trips integer (default: relaxed, as in the national runs)")
     args = parser.parse_args()
 
     load_data()
@@ -1888,13 +1894,14 @@ if __name__ == "__main__":
         all_regions = [r for r in all_regions if r not in finished]
         print(f"Resuming from {partial_path}: {len(finished)} regions already done")
 
-    print(f"Running {len(all_regions)} regions with max_workers={MAX_WORKERS}, T={args.T}", flush=True)
+    print(f"Running {len(all_regions)} regions with max_workers={args.workers}, T={args.T}, "
+          f"trips={'integer' if args.integer_trips else 'relaxed'}", flush=True)
     cms_failures = []
 
     # initializer=load_data: macOS starts workers fresh (spawn), so each worker
     # loads the data itself instead of inheriting it through fork.
-    with ProcessPoolExecutor(max_workers=MAX_WORKERS, initializer=load_data) as executor:
-        futures = {executor.submit(run_region, r, args.T): r for r in all_regions}
+    with ProcessPoolExecutor(max_workers=args.workers, initializer=load_data) as executor:
+        futures = {executor.submit(run_region, r, args.T, not args.integer_trips): r for r in all_regions}
         for future in as_completed(futures):
             region = futures[future]
             results, error = future.result()

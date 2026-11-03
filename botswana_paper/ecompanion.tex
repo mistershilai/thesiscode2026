@@ -105,37 +105,38 @@ The inventory and availability constraints introduce one budget multiplier per n
 The adjustable robust allocation problem is therefore an exact single-level mixed-integer linear program of size linear in $|N|$, $|A|$, and $K$, which proves Proposition~4.1. \hfill$\blacksquare$
 
 % ======================= EC.2 EXACTNESS OF ADRs =======================
-\section{Exactness of Affine Decision Rules}
+\section{Optimality of Affine Decision Rules}
 \label{ec:exactness}
 
-This section proves Theorems~4.1, 4.2, and~4.3 of the main text.
-We suppress the indices $(t)$ and $k$ throughout, since the mechanism is identical for each period and class, and we work with CMS supply $S$ directly: both theorems spend the entire budget, so $S=B/c^{\text{proc}}$ recovers the main text's statement once $B$ is fixed.
-Demand at node $n$ is $D_n = \bar D_n + \xi_n$, with $\bar D_n \ge 0$ and $\xi_n$ in the budgeted set $\mathcal{U} = \{ \xi\in\reals^{|N|} : |\xi_n|\le\sigma_n\ \forall n,\ \sum_{n\in N}|\xi_n|/\sigma_n\le\Gamma \}$, and the affine decision rule on arc $(u,v)$ is $F_{(u,v)}(\xi_v) = \bar F_{(u,v)} + \alpha_{(u,v)}\xi_v$, the main text's rule with the suppressed indices restored.
+This section proves Proposition~4.2 and Theorems~4.1 and~4.2 of the main text.
+We suppress the period and class indices throughout, since the mechanism is identical for each period and class.
+We work with CMS supply $S$ directly: procurement is the only cost charged against the budget, so $S=B/c^{\text{proc}}$ recovers the main text's statements.
+Demand at node $n$ is $D_n = \bar D_n + \xi_n$, with $\bar D_n \ge 0$ and $\xi_n$ in the budgeted set $\mathcal{U} = \{ \xi\in\reals^{|N|} : |\xi_n|\le\sigma_n\ \forall n,\ \sum_{n\in N}|\xi_n|/\sigma_n\le\Gamma \}$, with the convention $\xi_n = 0$ when $\sigma_n = 0$, and the affine decision rule on arc $(u,v)$ is $F_{(u,v)}(\xi_v) = \bar F_{(u,v)} + \alpha_{(u,v)}\xi_v$, the main text's rule with the suppressed indices restored.
 
 \subsection{Single-Echelon Network}
 \label{ec:exactness-single}
 
 Suppose CMS has $S\ge0$ units available and ships directly to facilities $n\in N$.
-A feasible shipment rule satisfies $F_n(\xi_n)\ge0$ and $\sum_{n\in N}F_n(\xi_n)\le S$ for every $\xi\in\mathcal{U}$.
-Unmet demand at facility $n$ is $U_n(\xi) = [\bar D_n+\xi_n-F_n(\xi_n)]^+$, and the robust service objective is $W(F) = \max_{\xi\in\mathcal{U}}\sum_{n\in N}U_n(\xi)$.
-Let $M := \max_{\xi\in\mathcal{U}}\sum_{n\in N}(\bar D_n+\xi_n)$ denote the worst-case total demand.
+A feasible shipment policy assigns to every $\xi\in\mathcal{U}$ shipments $F_n(\xi)\ge0$ with $\sum_{n\in N}F_n(\xi)\le S$, and may depend on the full vector $\xi$.
+Realized unmet demand at facility $n$ is $U_n(\xi) = [\bar D_n+\xi_n-F_n(\xi)]^+$, and the objective is the joint worst case $W(F) = \max_{\xi\in\mathcal{U}}\sum_{n\in N}U_n(\xi)$.
+Let $D^{\max} := \max_{\xi\in\mathcal{U}}\sum_{n\in N}(\bar D_n+\xi_n)$ denote the worst-case total demand.
 
-\begin{proof}[Proof of Theorem~4.1]
+\begin{proof}[Proof of Proposition~4.2]
 Assume $\bar D_n\ge\sigma_n$ for every $n\in N$.
-For any feasible shipment rule and any $\xi\in\mathcal{U}$, subadditivity of $t\mapsto t^+$ gives
+For any feasible shipment policy and any $\xi\in\mathcal{U}$, subadditivity of $t\mapsto t^+$ gives
 \begin{equation}
-\textstyle\sum_n U_n(\xi) \;\ge\; \big[\sum_n(\bar D_n+\xi_n-F_n(\xi_n))\big]^+
+\textstyle\sum_n U_n(\xi) \;\ge\; \big[\sum_n(\bar D_n+\xi_n-F_n(\xi))\big]^+
 \;\ge\; \big[\sum_n(\bar D_n+\xi_n) - S\big]^+,
 \end{equation}
-where the second inequality uses $\sum_n F_n(\xi_n)\le S$.
-Taking the maximum over $\xi$ gives $W(F)\ge(M-S)^+$ for every feasible rule, affine or not, so no procurement level $q$ attains a value below $(M-q)^+$ at $S=q$.
-Since $q\mapsto(M-q)^+$ is nonincreasing and feasibility restricts $q$ only through $c^{\text{proc}}q\le B$, spending the entire budget ($S=B/c^{\text{proc}}$) is optimal.
+where the second inequality uses $\sum_n F_n(\xi)\le S$.
+Taking the maximum over $\xi$ gives $W(F)\ge(D^{\max}-S)^+$ for every feasible policy.
+The map $S\mapsto(D^{\max}-S)^+$ is nonincreasing and constant for $S\ge D^{\max}$, and the budget allows $S\le B/c^{\text{proc}}$, so no policy attains a value below $(D^{\max}-B/c^{\text{proc}})^+$.
 
-Now consider $F_n(\xi_n) = \lambda(\bar D_n+\xi_n)$ with $\lambda := \min\{1, S/M\}$ (and $\lambda=1$ if $M=0$).
+Now let $S=\min\{D^{\max},B/c^{\text{proc}}\}$ and consider $F_n(\xi_n) = \phi(\bar D_n+\xi_n)$ with $\phi := S/D^{\max}$ (and $\phi=1$ if $D^{\max}=0$).
 Because $\bar D_n\ge\sigma_n$, realized demand is nonnegative throughout $\mathcal{U}$, so $F_n(\xi_n)\ge0$.
-Also $\sum_n F_n(\xi_n) = \lambda\sum_n(\bar D_n+\xi_n)\le\lambda M\le S$, so the rule is feasible.
-Since $0\le\lambda\le1$ and $\bar D_n+\xi_n\ge0$, unmet demand is $U_n(\xi) = (1-\lambda)(\bar D_n+\xi_n)$ exactly, with the truncation at zero never active.
-Summing and taking the maximum over $\xi$ gives $W(F) = (1-\lambda)M = (M-S)^+$, matching the lower bound and proving the theorem at $S=B/c^{\text{proc}}$.
+Also $\sum_n F_n(\xi_n) = \phi\sum_n(\bar D_n+\xi_n)\le\phi D^{\max} = S$, so the rule is feasible.
+Since $0\le\phi\le1$ and $\bar D_n+\xi_n\ge0$, unmet demand is $U_n(\xi) = (1-\phi)(\bar D_n+\xi_n)$ exactly, with the truncation at zero never active.
+Summing and taking the maximum over $\xi$ gives $W(F) = (1-\phi)D^{\max} = (D^{\max}-B/c^{\text{proc}})^+$, matching the lower bound.
 \end{proof}
 
 Under the main text's demand calibration $\sigma_n=\sqrt{\bar D_n+\bar D_n^2/\kappa}$, the hypothesis $\bar D_n\ge\sigma_n$ holds once $\bar D_n\ge\kappa/(\kappa-1)$, about $1.1$ at $\kappa=10$.
@@ -144,6 +145,7 @@ Under the main text's demand calibration $\sigma_n=\sqrt{\bar D_n+\bar D_n^2/\ka
 \label{ec:exactness-tree}
 
 Now the distribution network is a rooted tree with CMS at node $0$.
+Initial inventory is zero, arcs are uncapacitated, and a node may hold any quantity it receives beyond its needs.
 Non-CMS node $n$ has upstream node $p(n)$ and downstream nodes $C(n)$, and we write $F_n(\xi_n) := F_{(p(n),n)}(\xi_n)$.
 A node must have enough inflow to meet its own demand and every shipment sent downstream,
 \begin{equation}
@@ -184,15 +186,19 @@ The affine decision rules
 F_n(\xi_n) = A_n+\alpha_n\xi_n,
 \label{eq:ec-adr-tree}
 \end{equation}
-with $A_n$ and $\alpha_n$ given by Equations~\ref{eq:ec-leaf}--\ref{eq:ec-A}, are the ones Theorem~4.2 refers to, attaining the minimum required supply $S_{\rm zero} = \sum_{c\in C(0)}A_c+H_0(k)$ (with $H_0$ built from the root-child values $g_c$) and, equivalently, the minimum budget $B_{\rm zero}=c^{\text{proc}}S_{\rm zero}$.
+with $A_n$ and $\alpha_n$ given by Equations~\ref{eq:ec-leaf}--\ref{eq:ec-A}, are the ones Theorem~4.1 refers to, attaining the minimum required supply $S_{\rm zero} = \sum_{c\in C(0)}A_c+H_0(k)$ (with $H_0$ built from the root-child values $g_c$) and, equivalently, the minimum budget $B_{\rm zero}=c^{\text{proc}}S_{\rm zero}$.
 
-\begin{proof}[Proof of Theorem~4.2]
+\begin{proof}[Proof of Theorem~4.1]
 Assume $\bar D_n\ge\sigma_n$ for every $n\ne0$, and let $\Gamma=k\in\{1,2,\dots\}$.
-Working from the lowest tier upward, we show by induction that, with $\underline F_n(x) := A_n+x-(\rho_n/\sigma_n)|x|$ and $\rho_n=0$ at a leaf, (i) every policy guaranteeing zero unmet demand satisfies $F_n(x)\ge\underline F_n(x)$ for $x\in[-\sigma_n,\sigma_n]$, and (ii) the rule of Equation~\ref{eq:ec-adr-tree} attains this bound.
-At a leaf, $\underline F_n(x)=\bar D_n+x$ and the rule $F_n(x)=\bar D_n+x$ attains it, so both hold at the lowest tier.
+Let $\underline F_n(x) := A_n+x-(\rho_n/\sigma_n)|x|$, with $\rho_n=0$ at a leaf and $\underline F_n(0) := A_n$ when $\sigma_n=0$.
+Working from the lowest tier upward, we show by induction two statements at every non-CMS node $n$.
+(i) Every destination-dependent policy guaranteeing zero unmet demand satisfies $F_n(x)\ge\underline F_n(x)$ for $x\in[-\sigma_n,\sigma_n]$.
+(ii) The rules of Equation~\ref{eq:ec-adr-tree} satisfy Equation~\ref{eq:ec-flow} at every node of the subtree rooted at $n$, for every $\xi\in\mathcal U$.
+At a leaf, $\underline F_n(x)=\bar D_n+x$ and the rule is $F_n(x)=\bar D_n+x$, so both hold at the lowest tier.
 
 For an internal node $n$ whose children satisfy (i)-(ii), split $\underline F_c$ by the sign of its argument: $\underline F_c(y)=A_c+(1+\rho_c/\sigma_c)y$ for $y\le0$ and $A_c+(1-\rho_c/\sigma_c)y$ for $y\ge0$, so a negative deviation never raises $\underline F_c$ above $A_c$ and a positive one raises it by at most $g_c=(\sigma_c-\rho_c)^+$, at $y=\sigma_c$.
 Fix $\xi_n=x$.
+Because the policy is destination-dependent, statement (i) bounds each child's shipment as a function of that child's deviation alone, whatever the other coordinates are.
 Since the remaining tree coordinates can be set to zero, admissible child deviations satisfy $\sum_{c}|\xi_c|/\sigma_c\le k-|x|/\sigma_n$, and statement (i) at each child together with Equation~\ref{eq:ec-flow} gives
 \begin{equation}
 F_n(x) \;\ge\; \bar D_n+x+\max_{\substack{|\xi_c|\le\sigma_c\\ \sum_c|\xi_c|/\sigma_c\le k-|x|/\sigma_n}}\ \textstyle\sum_{c\in C(n)}\underline F_c(\xi_c)
@@ -203,10 +209,16 @@ the equality because negative child deviations never increase the maximum and ea
 Since $k$ is an integer and $|x|/\sigma_n\in[0,1]$, $H_n$ is linear on $[k-1,k]$ with slope $\rho_n$, so $H_n(k-|x|/\sigma_n)=H_n(k)-\rho_n|x|/\sigma_n$.
 Combined with the definition of $A_n$, Equation~\ref{eq:ec-necessary-max} gives $F_n(x)\ge\underline F_n(x)$, proving (i) at $n$.
 
-For (ii), a direct check of $A_n+\alpha_nx$ against $\underline F_n(x)$ in each of $x\ge0$ and $x\le0$ (using $\alpha_n=(\sigma_n-\rho_n)^+/\sigma_n\le1\le1+\rho_n/\sigma_n$) shows the rule always meets the bound, with equality whenever $\rho_n\le\sigma_n$ and $x\ge0$.
-Its largest increase above $A_n$ is exactly $\alpha_n\sigma_n=g_n$, so $(A_n,g_n)$ satisfies the same recursive definition one level up, closing the induction.
+For (ii), fix $\xi\in\mathcal U$ with $\xi_n=x$.
+Each child's rule satisfies $F_c(\xi_c)\le A_c+g_c\,\xi_c^+/\sigma_c$, because $\alpha_c\sigma_c=g_c$ and a negative deviation does not raise $F_c$ above $A_c$.
+The values $z_c=\xi_c^+/\sigma_c$ are feasible in Equation~\ref{eq:ec-H} at $r=k-|x|/\sigma_n$, so $\sum_{c}F_c(\xi_c)\le\sum_{c}A_c+H_n(k-|x|/\sigma_n)$.
+A direct check in each of $x\ge0$ and $x\le0$, using $\alpha_n=(\sigma_n-\rho_n)^+/\sigma_n\le1\le1+\rho_n/\sigma_n$, gives $A_n+\alpha_nx\ge\underline F_n(x)$.
+Combining the two with the linearity of $H_n$ gives $F_n(x)\ge\bar D_n+x+\sum_{c}F_c(\xi_c)$, which is Equation~\ref{eq:ec-flow} at $n$, and the children satisfy (ii) by hypothesis.
+The shipments are nonnegative: $F_n(\xi_n)\ge A_n-\alpha_n\sigma_n\ge\bar D_n-\sigma_n\ge0$, since $\alpha_n\le1$ and $A_n\ge\bar D_n$.
+This is the only use of the hypothesis $\bar D_n\ge\sigma_n$.
+The largest increase of $F_n$ above $A_n$ is $\alpha_n\sigma_n=g_n$, so $(A_n,g_n)$ enters the recursion one level up, closing the induction.
 
-At CMS, statement (i) at each root child gives $S\ge\sum_{c\in C(0)}A_c+H_0(k)=S_{\rm zero}$ as necessary, and statement (ii) shows the constructed rules meet it, so $S_{\rm zero}$ is also sufficient, proving the theorem at $S=B/c^{\text{proc}}=S_{\rm zero}$, i.e.\ $B=B_{\rm zero}$.
+At CMS, statement (i) at each root child gives $S\ge\sum_{c\in C(0)}A_c+H_0(k)=S_{\rm zero}$ as necessary, and statement (ii) shows the constructed rules meet it, so $S_{\rm zero}$ is also sufficient and $B_{\rm zero}=c^{\text{proc}}S_{\rm zero}$.
 \end{proof}
 
 \subsection{The Value of Adaptivity}
@@ -214,7 +226,7 @@ At CMS, statement (i) at each root child gives $S\ge\sum_{c\in C(0)}A_c+H_0(k)=S
 
 We keep the notation of \Sec\ref{ec:exactness-tree} with $\Gamma = k$, set $H_n(k) := 0$ at a leaf, and work with supply, so that $\Delta = c^{\text{proc}}(S_{\rm static} - S_{\rm zero})$.
 
-\begin{proof}[Proof of Theorem~4.3]
+\begin{proof}[Proof of Theorem~4.2]
 \emph{Static budget.}
 A static rule ships a constant $F_n$ into each node.
 Since $k \ge 1$, the deviation with $\xi_n = \sigma_n$ and every other coordinate zero lies in $\mathcal U$, and at it Equation~\ref{eq:ec-flow} requires $F_n \ge \bar D_n + \sigma_n + \sum_{c \in C(n)} F_c$.
@@ -231,19 +243,22 @@ The sum of the $k$ largest entries of a vector is nondecreasing in each entry an
 
 \emph{Monotonicity in $\Gamma$.}
 The budgeted set for $k$ is contained in the set for $k+1$, so the destination-dependent rule attaining $S_{\rm zero}$ at $k+1$ also guarantees zero unmet demand at $k$.
-By the minimality in Theorem~4.2, $S_{\rm zero}$ is nondecreasing in $k$, and $S_{\rm static}$ does not depend on $k$.
+By the minimality in Theorem~4.1, $S_{\rm zero}$ is nondecreasing in $k$, and $S_{\rm static}$ does not depend on $k$.
 
 \emph{Monotonicity in each $\sigma_j$.}
-Let $\sigma'$ agree with $\sigma$ except $\sigma'_j = \sigma_j + \varepsilon$ with $\varepsilon > 0$, both satisfying the hypotheses of Theorem~4.2.
+Let $\sigma'$ agree with $\sigma$ except $\sigma'_j = \sigma_j + \varepsilon$ with $\varepsilon > 0$, both satisfying the hypotheses of Theorem~4.1.
 The static supply rises by exactly $\varepsilon$, so it suffices that $S_{\rm zero}$ rises by at most $\varepsilon$.
 Let $F$ attain $S_{\rm zero}$ under $\sigma$, and map each $\xi'$ in the set for $\sigma'$ to $\xi$ in the set for $\sigma$ by $\xi_j = \xi'_j \sigma_j/\sigma'_j$, other coordinates unchanged, which preserves the budget term and gives $|\xi'_j - \xi_j| \le \varepsilon$.
 Set $F'_j(\xi'_j) = F_j(\xi_j) + \xi'_j - \xi_j$, which is at least $\bar D_j + \xi'_j + \sum_{c \in C(j)} F_c \ge 0$, add $\varepsilon$ to the shipment into every other ancestor of $j$ and to the CMS supply, and leave all other shipments unchanged.
 This rule is destination-dependent, and at each ancestor the shipment rises by $\varepsilon$ while the child on the path to $j$ receives at most $\varepsilon$ more, so Equation~\ref{eq:ec-flow} holds everywhere with supply $S_{\rm zero} + \varepsilon$.
-By the minimality in Theorem~4.2, $S_{\rm static} - S_{\rm zero}$ does not decrease.
+By the minimality in Theorem~4.1, $S_{\rm static} - S_{\rm zero}$ does not decrease.
 \end{proof}
 
-Theorems~4.1--4.3 charge only procurement against the budget.
+Proposition~4.2 and Theorems~4.1 and~4.2 charge only procurement against the budget.
+Proposition~4.2 measures the joint worst case of realized unmet demand, whereas the implemented model takes the robust counterpart constraint by constraint with planned unmet demand.
 The full model also includes transport and holding cost, multiple periods and classes, inventory carryover, capacities, route activation, and storage constraints.
+The hypothesis $\bar D_n \ge \sigma_n$ holds under the calibration of Section~5 when $\bar D_n \ge \kappa/(\kappa-1)$.
+In the CMS instance at $\kappa = 10$ it fails for $72\%$ of facility--product pairs in 2025--26 and $67\%$ in 2026--27, which carry $4.3\%$ and $2.7\%$ of mean demand.
 
 % ======================= EC.3 PROOFS =======================
 \section{Details for the Demand Estimator}
@@ -311,7 +326,7 @@ Initial share of $N$ in $I_s, I_r, E_s, E_r$ & & $0.01, 0.005, 0.005, 0.002$ & A
 \end{table}
 
 \paragraph{Closed-loop results.}
-The evaluation so far treats demand as statistically uncertain but exogenous.
+The main-text evaluation treats demand as statistically uncertain but exogenous.
 We make demand epidemiologically driven by coupling the allocation model to a two-strain compartmental model at Princess Marina Hospital.
 The two strains are drug-susceptible (DS), treated with first-line cephalosporins, and drug-resistant (DR), treated with second-line carbapenems.
 Treatment intensity is tied to realized supply: the DS and DR treatment rates scale with the delivered fractions of cephalosporins and carbapenems, saturating at their nominal levels.
@@ -353,13 +368,13 @@ ARO-ADR       &  2.15 & 6{,}277 & 5{,}793 \\
 \end{figure}
 
 \paragraph{Two-year resistance dynamics.}
-Over the two-year horizon of the main-text extension, the deterministic policy's chronic cephalosporin shortages slow clearance of the susceptible strain and sustain the amplification pathway.
+Over the two-year horizon, the deterministic policy's chronic cephalosporin shortages slow clearance of the susceptible strain and sustain the amplification pathway.
 The robust policies clear both strains faster (Figure~\ref{fig:resistance}).
 Static robust and ARO-ADR are nearly indistinguishable here ($\rho = 0.07$).
 
 \begin{figure}[!htbp]
     \centering
-    \includegraphics[width=0.95\linewidth]{figures/resistance_emergence_comparison}
+    \includegraphics[width=0.85\linewidth]{figures/resistance_emergence_comparison}
     \caption{Resistance and susceptible-strain dynamics at Princess Marina Hospital over two years. \textbf{Left:} drug-resistant infectious population $I_r$. \textbf{Right:} drug-susceptible infectious population $I_s$.}
     \label{fig:resistance}
 \end{figure}
@@ -382,18 +397,16 @@ Repeating the extension for $\rho$ from $0.01$ to $0.30$, the resistant fraction
 Figure~\ref{fig:gamma} varies the budget $\Gamma$ across dispersion levels.
 Static robust is flat in $\Gamma$, since for $\Gamma \ge 1$ its protection at each node already covers that node's full deviation.
 ARO-ADR improves as $\Gamma$ grows, so its advantage over static robust widens, from $3.7$ to $4.8$ percentage points at $\kappa = 2$ and from $1.2$ to $2.8$ at $\kappa = 10$ between $\Gamma = 1$ and $\Gamma = 50$.
-The advantage is largest at high variability at every $\Gamma$.
 
 \begin{figure}[!htbp]
     \centering
-    \includegraphics[width=0.95\linewidth]{figures/gamma_sensitivity}
+    \includegraphics[width=0.85\linewidth]{figures/gamma_sensitivity}
     \caption{Realized unmet demand (\%) across policies for varying uncertainty budget $\Gamma$ (columns) and dispersion $\kappa$ (rows).}
     \label{fig:gamma}
 \end{figure}
 
 \paragraph{Budget.}
 Figure~\ref{fig:budget} varies the budget factor $f$ in $B^{(t)} = f\,B_{\rm ref}^{(t)}$ over $\{0.5,\allowbreak 0.75,\allowbreak 0.9,\allowbreak 1,\allowbreak 1.1,\allowbreak 1.25,\allowbreak 1.5,\allowbreak 2\}$ across dispersion levels, with $\Gamma = 10$ and $T = 20$.
-At $f = 1$ the cap is exactly the spend that serves the forecast.
 At $f = 0.5$ every policy leaves about half of demand unmet, and at $f = 0.75$ about a quarter.
 The ordering holds at every $\kappa$ from $f = 1$.
 The deterministic policy stops improving at $f = 1$, since it never spends more than serving the forecast requires, while both robust policies keep using the extra budget.
@@ -401,7 +414,7 @@ At $\kappa = 10$, ARO-ADR reaches $0.9\%$ at $f = 1.25$ and $0.8\%$ at $f = 1.5$
 
 \begin{figure}[!htbp]
     \centering
-    \includegraphics[width=0.95\linewidth]{figures/budget_sensitivity}
+    \includegraphics[width=0.85\linewidth]{figures/budget_sensitivity}
     \caption{Realized unmet demand (\%) across policies for varying budget factor $f$ (columns) and dispersion $\kappa$ (rows).}
     \label{fig:budget}
 \end{figure}
@@ -415,7 +428,6 @@ The experiment covers aminoglycosides, quinolones and lincosamides, applying the
 Given only stationary forecasts, mean unmet demand peaks at $55\%$ under deterministic planning, $51\%$ under ARO-ADR, and $40\%$ under static robust.
 Here the robust policies trade places, and over the whole horizon static robust leaves $8.5\%$ of demand unmet against $13.2\%$ for ARO-ADR and $15.5\%$ for deterministic.
 The affine rule hedges around a mean that is wrong for most of the cycle, while the static policy's larger buffer absorbs more of the error.
-When the mean itself is wrong, forecasting it matters more than the choice of hedge.
 Given the seasonally-adjusted means, ARO-ADR attains a mean unmet rate of $0.71\%$, against $2.41\%$ for static robust and $9.51\%$ for deterministic (Figure~\ref{fig:seasonal}).
 
 \begin{figure}[!htbp]
@@ -430,6 +442,13 @@ Given the seasonally-adjusted means, ARO-ADR attains a mean unmet rate of $0.71\
     \end{subfigure}
     \caption{Realized unmet demand over two seasonal cycles. Curves are means over 12 independent demand realizations, and bands are $95\%$ confidence intervals.}
     \label{fig:seasonal}
+\end{figure}
+
+\begin{figure}[!t]
+    \centering
+    \includegraphics[width=0.52\textwidth]{figures/cms_full_metrics_2526}
+    \caption{Real CMS data, 2025--26 scenario: district-level maps of average unmet demand, total cost, procurement, transport, and holding cost (rows) under the three policies (columns). District names are omitted, as in the main text.}
+    \label{fig:cmsfull2526}
 \end{figure}
 
 \paragraph{Persistent demand.}
@@ -455,19 +474,6 @@ Martingale ($\theta = 0$) & $38.32$ & $28.33$ & $21.16$ & $14.15$ & $11.49$ \\
 The ordering holds in every case, and ARO-ADR remains best.
 Service degrades with persistence because every policy plans on a fixed forecast while demand drifts away from it, and recalibrating the deviation bound recovers about half of that loss under the martingale.
 
-\paragraph{Disaggregated cost maps.}
-Figure~\ref{fig:cmsfull2526} decomposes the 2025--26 real-CMS results of Section~6.3 by cost component and district, and the 2026--27 scenario shows the same pattern.
-Procurement cost per unit is nearly uniform across districts, at $22.3$ to $23.2$ BWP, and holding cost is higher under the robust policies, which pre-position inventory.
-Transport is at most $0.3\%$ of spend in any district.
-Kweneng has the largest transport cost, shipping about four fifths of Greater Gaborone's volume at nearly six times the transport cost per unit, and the sparse districts Kgalagadi North and Tutume cost more per unit still.
-
-\begin{figure}[!htbp]
-    \centering
-    \includegraphics[width=0.702\textwidth]{figures/cms_full_metrics_2526}
-    \caption{Real CMS data, 2025--26 scenario: district-level maps of average unmet demand, total cost, procurement, transport, and holding cost (rows) under the three policies (columns). District names are omitted, as in the main text.}
-    \label{fig:cmsfull2526}
-\end{figure}
-
 \paragraph{Minimum stock levels.}
 CMS writes stock policy as a minimum cover: an elastic floor requiring every facility to end each period holding at least $\beta$ periods of its nominal demand, swept across $\beta$ (Figure~\ref{fig:floor}).
 Raising $\beta$ from $0$ to $2$ multiplies the deterministic policy's held inventory by $14.3$ and its total cost by $1.33$.
@@ -475,10 +481,16 @@ Its unmet demand falls by $2.2$ percentage points, against $11.5$ points from sw
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.95\linewidth]{figures/equity_frontier}
+    \includegraphics[width=0.68\linewidth]{figures/equity_frontier}
     \caption{Elastic minimum stock cover $\beta$ swept across policies. \textbf{Left:} total cost over the horizon. \textbf{Right:} mean unmet demand.}
     \label{fig:floor}
 \end{figure}
+
+\paragraph{Disaggregated cost maps.}
+Figure~\ref{fig:cmsfull2526} decomposes the 2025--26 real-CMS results of Section~6.3 by cost component and district, and the 2026--27 scenario shows the same pattern.
+Procurement cost per unit is nearly uniform across districts, at $22.3$ to $23.2$ BWP, and holding cost is higher under the robust policies, which pre-position inventory.
+Transport is at most $0.3\%$ of spend in any district.
+
 
 \begin{singlespace}
 \small
