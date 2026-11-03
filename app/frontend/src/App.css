@@ -110,7 +110,7 @@
 }
 
 body {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: var(--k-050a18);
   color: var(--k-e2e8f0);
   line-height: 1.6;
@@ -300,9 +300,8 @@ body {
   opacity: 0.5;
 }
 
-/* Top bar: Space Grotesk, all lowercase. */
+/* Top bar: all lowercase. */
 .navbar {
-  font-family: "Space Grotesk", "Inter", sans-serif;
   text-transform: lowercase;
 }
 
@@ -1583,7 +1582,7 @@ body {
 }
 
 .leaflet-popup-content {
-  font-family: "Inter", sans-serif !important;
+  font-family: "Space Grotesk", sans-serif !important;
   font-size: 0.85rem !important;
   line-height: 1.5 !important;
 }
