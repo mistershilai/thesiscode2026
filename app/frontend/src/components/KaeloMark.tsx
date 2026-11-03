@@ -12,7 +12,9 @@ export default function KaeloMark({ size = 30 }: { size?: number }) {
       aria-hidden="true"
     >
       <defs>
-        <linearGradient id="kaelo-mark-grad" x1="0" y1="0" x2="1" y2="1">
+        {/* User-space units: a bounding-box gradient has zero width on the
+            vertical stem and would leave it unpainted. */}
+        <linearGradient id="kaelo-mark-grad" gradientUnits="userSpaceOnUse" x1="4" y1="2" x2="28" y2="30">
           <stop offset="0%" stopColor="#38bdf8" />
           <stop offset="100%" stopColor="#2563eb" />
         </linearGradient>
