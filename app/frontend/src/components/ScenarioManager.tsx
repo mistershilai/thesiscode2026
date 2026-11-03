@@ -125,7 +125,7 @@ export default function ScenarioManager({ value, onChange }: Props) {
               type="button"
               className="btn-sm"
               disabled={busy}
-              style={{ color: "#f87171", borderColor: "rgba(248,113,113,0.3)" }}
+              style={{ color: "var(--k-f87171)", borderColor: "rgba(248,113,113,0.3)" }}
               onClick={deleteScenario}
             >
               Delete
@@ -135,7 +135,7 @@ export default function ScenarioManager({ value, onChange }: Props) {
       </div>
 
       {error && (
-        <p style={{ fontSize: "0.75rem", color: "#f87171", margin: "0.2rem 0 0" }}>{error}</p>
+        <p style={{ fontSize: "0.75rem", color: "var(--k-f87171)", margin: "0.2rem 0 0" }}>{error}</p>
       )}
 
       {showEdit && (
@@ -152,7 +152,7 @@ export default function ScenarioManager({ value, onChange }: Props) {
             <div style={{ maxHeight: "50vh", overflowY: "auto", margin: "0.5rem 0" }}>
               <table style={{ width: "100%", fontSize: "0.8rem", borderCollapse: "collapse" }}>
                 <thead>
-                  <tr style={{ textAlign: "left", color: "#94a3b8" }}>
+                  <tr style={{ textAlign: "left", color: "var(--k-94a3b8)" }}>
                     <th style={{ padding: "0.3rem" }}>Product</th>
                     <th style={{ padding: "0.3rem", width: "120px" }}>Biweekly</th>
                   </tr>

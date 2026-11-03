@@ -736,6 +736,8 @@ def run_optimization(req: OptimizationRequest):
             "avg_procurement_cost": round(float(valid["procurement_cost"].mean()), 2),
             "periods_solved": len(valid),
             "periods_failed": len(metrics_df) - len(valid),
+            # Integer solves stop at the time limit; this is the worst gap left.
+            "max_mip_gap_pct": round(100.0 * float(valid["mip_gap"].max()), 3),
         }
 
     return OptimizationResult(

@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { Summary } from "../api/client";
-import AnimatedTagline from "../components/AnimatedTagline";
-import FooterNames from "../components/FooterNames";
 import Signature from "../components/Signature";
 
 export default function About() {

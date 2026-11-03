@@ -169,7 +169,7 @@ export default function ResultsView({ results }: Props) {
             <BarChart data={costData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="strategy" />
-              <YAxis />
+              <YAxis width={80} />
               <Tooltip />
               <Legend />
               {COST_COMPONENTS.filter((c) => enabledComponents[c.key]).map((c) => (

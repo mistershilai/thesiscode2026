@@ -11,6 +11,8 @@ import Methodology from "./pages/Methodology";
 import Login from "./pages/Login";
 import Asclepius from "./components/Asclepius";
 import FooterNames from "./components/FooterNames";
+import { setTheme, useTheme } from "./theme";
+import KaeloMark from "./components/KaeloMark";
 import "./App.css";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -23,6 +25,7 @@ function AppContent() {
   const { user, logout } = useAuth();
   const [solving, setSolving] = useState(false);
   const location = useLocation();
+  const theme = useTheme();
   const isLoginPage = location.pathname === "/login";
 
   // Expose setter globally so Optimize/Planning pages can toggle it
@@ -44,8 +47,8 @@ function AppContent() {
       {!isLoginPage && (
       <nav className="navbar">
         <Link to="/" className="nav-brand">
-          <img src="/logos/kaelo.png" alt="Kaelo" className="nav-logo" />
-          Kaelo
+          <KaeloMark />
+          kaelo
         </Link>
         <div className="nav-links">
           <Link to="/">Dashboard</Link>
@@ -56,6 +59,13 @@ function AppContent() {
           <Link to="/docs">Docs</Link>
         </div>
         <div className="nav-user">
+          <button
+            className="nav-logout"
+            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+            style={{ marginRight: "0.5rem" }}
+          >
+            {theme === "light" ? "Dark" : "Light"}
+          </button>
           {user ? (
             <>
               <span className="nav-username">{user.name || user.username}</span>

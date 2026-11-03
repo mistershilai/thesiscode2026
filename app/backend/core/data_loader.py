@@ -358,13 +358,24 @@ class AppData:
         fac["_norm"] = fac["DHMT"].astype(str).str.strip().str.lower()
         return fac[fac["_norm"] == dhmt.strip().lower()].drop(columns=["_norm"])
 
+    def network_node_count(self) -> int:
+        """Number of distinct nodes in the distribution network.
+
+        The master list minus facilities with no assigned DHMT, with facilities
+        that share a name across districts counted once (as the model does).
+        """
+        fac = self.fac
+        assigned = ~fac["DHMT"].astype(str).str.strip().isin(["", "--", "nan"])
+        names = fac.loc[assigned, "Facility Name"].astype(str).map(lambda x: " ".join(x.split()))
+        return int(names.nunique())
+
     def get_facility_summary(self) -> dict:
         """Return summary statistics about facilities."""
         fac = self.fac
         type_counts = fac["Service Delivery Type"].value_counts().to_dict()
         dhmt_counts = fac["DHMT"].astype(str).str.strip().value_counts().to_dict()
         return {
-            "total_facilities": len(fac),
+            "total_facilities": self.network_node_count(),
             "total_population": int(self.national_pop),
             "dhmt_count": len([d for d in self.dhmt_list if d.strip() not in ("", "--")]),
             "facility_type_counts": type_counts,

@@ -9,6 +9,7 @@ ever preferred over serving a unit of demand.
 """
 
 import logging
+import os
 import re
 import time
 from typing import Optional
@@ -16,6 +17,7 @@ from typing import Optional
 import cvxpy as cp
 import numpy as np
 import pandas as pd
+from cvxpy.reductions.solvers.conic_solvers.highs_conif import HIGHS as _HIGHS
 from scipy.spatial import cKDTree
 
 log = logging.getLogger(__name__)
@@ -23,6 +25,35 @@ log = logging.getLogger(__name__)
 # Weight on unmet demand in the lexicographic objective. Must exceed the most
 # expensive unit cost (CMS prices top out near 2,800 BWP).
 UNMET_PRIORITY = 1e4
+
+# Vehicle trips are integer, as in the paper. Branch and bound on a large district
+# can run for hours, so each integer solve stops after SOLVE_TIME_LIMIT_S seconds
+# and keeps the best integer plan found so far, reporting its optimality gap.
+SOLVE_TIME_LIMIT_S = float(os.environ.get("KAELO_SOLVE_TIME_LIMIT", "30"))
+
+
+class _HighsKeepIncumbent(_HIGHS):
+    """HiGHS that returns the best integer solution when the time limit stops
+    branch and bound. Stock cvxpy reports this as USER_LIMIT and drops it."""
+
+    def name(self):
+        return "HIGHS_KEEP_INCUMBENT"
+
+    def invert(self, results, inverse_data):
+        if results["model_status"] == "kTimeLimit" and results["info"].primal_solution_status == 2:
+            sol = super().invert({**results, "model_status": "kOptimal"}, inverse_data)
+            sol.status = cp.OPTIMAL_INACCURATE
+            return sol
+        return super().invert(results, inverse_data)
+
+
+def _solve(prob, integer_trips: bool) -> float:
+    """Solve with HiGHS and return the relative MIP gap (0 for an LP)."""
+    if not integer_trips:
+        prob.solve(solver=cp.HIGHS, verbose=False)
+        return 0.0
+    prob.solve(solver=_HighsKeepIncumbent(), verbose=False, time_limit=SOLVE_TIME_LIMIT_S)
+    return float(getattr(prob.solver_stats.extra_stats, "mip_gap", float("inf")))
 
 from .data_loader import app_data, clean_fac_name
 
@@ -399,12 +430,14 @@ def run_simulation(
     procurement_cost=0.0,
     supply_multiplier: float = 0.0,
     seed: int = 42,
+    relax_integrality: bool = False,
 ) -> pd.DataFrame:
     """
     Run a simulation for a given strategy and return period-level metrics.
 
     strategy: "nominal" | "static_robust" | "adr"
     budget:   cap on transport + procurement spend per period (BWP); None = no cap
+    relax_integrality: treat vehicle trips as continuous (default: integer)
     """
     nodes = list(instance["nodes"])
     arcs = list(instance["arcs"])
@@ -452,8 +485,12 @@ def run_simulation(
     u = cp.Variable((N, K), nonneg=True)
     I1 = cp.Variable((N, K), nonneg=True)
     q = cp.Variable(K, nonneg=True)
-    lam = cp.Variable(m, nonneg=True)
-    y = cp.Variable(m, nonneg=True)
+    if relax_integrality:
+        lam = cp.Variable(m, nonneg=True)
+        y = cp.Variable(m, nonneg=True)
+    else:
+        lam = cp.Variable(m, integer=True)
+        y = cp.Variable(m, boolean=True)
 
     big_m = 1e5
     net_flow = A_in @ F - A_out @ F          # (N, K)
@@ -461,6 +498,7 @@ def run_simulation(
 
     constraints = [
         y <= 1.0,
+        lam >= 0,
         lam <= big_m * y,
     ]
 
@@ -609,9 +647,9 @@ def run_simulation(
     for t in range(T):
         I0_param.value = I.to_numpy().astype(float)
         t1 = time.perf_counter()
-        prob.solve(solver=cp.HIGHS, verbose=False)
-        log.info("  period %d/%d solved in %.3fs [%s]",
-                 t + 1, T, time.perf_counter() - t1, prob.status)
+        gap = _solve(prob, not relax_integrality)
+        log.info("  period %d/%d solved in %.3fs [%s, gap %.2g]",
+                 t + 1, T, time.perf_counter() - t1, prob.status, gap)
 
         if prob.status not in ("optimal", "optimal_inaccurate"):
             metrics.append({
@@ -620,6 +658,7 @@ def run_simulation(
                 "holding_cost": None, "procurement_cost": None,
                 "spend": None, "budget": budget, "budget_used_pct": None,
                 "unmet_pct": None, "total_unmet": None, "total_demand": None,
+                "mip_gap": None,
             })
             continue
 
@@ -670,6 +709,7 @@ def run_simulation(
             "unmet_pct": (total_unmet / total_demand * 100.0) if total_demand > 0 else 0.0,
             "total_unmet": total_unmet,
             "total_demand": total_demand,
+            "mip_gap": gap,
         })
 
     return pd.DataFrame(metrics)
@@ -688,11 +728,13 @@ def run_planning(
     procurement_cost=0.0,
     initial_inventory: dict | None = None,
     last_demand: dict | None = None,
+    relax_integrality: bool = False,
 ) -> dict:
     """
     Solve ONE period with real inputs and return actionable shipment decisions.
 
     budget: cap on this period's transport + procurement spend (BWP); None = no cap
+    relax_integrality: treat vehicle trips as continuous (default: integer)
 
     initial_inventory: {facility_name: {drug: quantity}}, current stock on hand
     last_demand:       {facility_name: {drug: quantity}}, last period realized demand
@@ -761,8 +803,12 @@ def run_planning(
     u = cp.Variable((N, K), nonneg=True)
     I1 = cp.Variable((N, K), nonneg=True)
     q = cp.Variable(K, nonneg=True)
-    lam = cp.Variable(m, nonneg=True)
-    y = cp.Variable(m, nonneg=True)
+    if relax_integrality:
+        lam = cp.Variable(m, nonneg=True)
+        y = cp.Variable(m, nonneg=True)
+    else:
+        lam = cp.Variable(m, integer=True)
+        y = cp.Variable(m, boolean=True)
 
     big_m = 1e5
     net_flow = A_in @ F - A_out @ F
@@ -770,6 +816,7 @@ def run_planning(
 
     constraints = [
         y <= 1.0,
+        lam >= 0,
         lam <= big_m * y,
     ]
 
@@ -879,10 +926,10 @@ def run_planning(
 
     t0 = time.perf_counter()
     prob = cp.Problem(obj, constraints)
-    prob.solve(solver=cp.HIGHS, verbose=False)
+    gap = _solve(prob, not relax_integrality)
     solve_time = time.perf_counter() - t0
-    log.info("Planning solve: N=%d, m=%d, K=%d, strategy=%s, %.2fs [%s]",
-             N, m, K, strategy, solve_time, prob.status)
+    log.info("Planning solve: N=%d, m=%d, K=%d, strategy=%s, %.2fs [%s, gap %.2g]",
+             N, m, K, strategy, solve_time, prob.status, gap)
 
     if prob.status not in ("optimal", "optimal_inaccurate"):
         return {"status": prob.status, "shipments": [], "procurement": [], "summary": {}}
@@ -963,6 +1010,8 @@ def run_planning(
     return {
         "status": "optimal",
         "solve_time_s": round(solve_time, 2),
+        "mip_gap": gap,
+        "time_limited": prob.status == "optimal_inaccurate",
         "strategy": strategy,
         "shipments": sorted(shipments, key=lambda s: -s["quantity"]),
         "procurement": sorted(procurement, key=lambda p: -p["quantity"]),
@@ -991,13 +1040,16 @@ def forecast_period_cost(
     transport_cost_per_km: float = 0.5,
     holding_cost: float = 0.1,
     procurement_cost=0.0,
+    relax_integrality: bool = True,
 ) -> float:
     """Reference budget: the least transport + procurement spend that serves one
     period's forecast demand in full from empty shelves (the paper's B_ref).
-    Solved as one uncapped nominal planning period."""
+    Solved as one uncapped nominal planning period. Trips are relaxed by default,
+    as in the paper."""
     res = run_planning(
         instance, strategy="nominal", transport_cost_per_km=transport_cost_per_km,
         budget=None, holding_cost=holding_cost, procurement_cost=procurement_cost,
+        relax_integrality=relax_integrality,
     )
     if res.get("status") != "optimal":
         raise RuntimeError(f"forecast cost solve failed: {res.get('status')}")

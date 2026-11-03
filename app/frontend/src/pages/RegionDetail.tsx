@@ -161,7 +161,7 @@ export default function RegionDetail() {
       </div>
 
       {status && (
-        <div style={{ fontSize: "0.8rem", color: "#94a3b8", margin: "0.5rem 0" }}>{status}</div>
+        <div style={{ fontSize: "0.8rem", color: "var(--k-94a3b8)", margin: "0.5rem 0" }}>{status}</div>
       )}
 
       <div className="facility-table-wrapper">
@@ -202,7 +202,7 @@ export default function RegionDetail() {
                         </button>
                         <button
                           className="btn-xs"
-                          style={{ color: "#f87171", borderColor: "rgba(239,68,68,0.25)" }}
+                          style={{ color: "var(--k-f87171)", borderColor: "rgba(239,68,68,0.25)" }}
                           onClick={() => setConfirmRemove(f.name)}
                         >
                           remove
@@ -331,7 +331,7 @@ export default function RegionDetail() {
       {pendingRemove && (
         <div className="add-form" style={{ borderColor: "rgba(245,158,11,0.3)", marginTop: "0.75rem" }}>
           <h4 style={{ color: "#fbbf24" }}>Reroute Required</h4>
-          <p style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+          <p style={{ fontSize: "0.8rem", color: "var(--k-94a3b8)" }}>
             Removing <strong>{pendingRemove.name}</strong> will affect{" "}
             {pendingRemove.downstream.length} downstream facilities. Choose a replacement hospital:
           </p>
@@ -351,7 +351,7 @@ export default function RegionDetail() {
               </select>
             </label>
           ) : (
-            <p style={{ color: "#f87171" }}>No other hospitals in this region. Add a new hospital first.</p>
+            <p style={{ color: "var(--k-f87171)" }}>No other hospitals in this region. Add a new hospital first.</p>
           )}
           <div style={{ display: "flex", gap: "0.4rem" }}>
             <button

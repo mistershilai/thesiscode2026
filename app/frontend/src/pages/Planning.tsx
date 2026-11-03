@@ -20,7 +20,7 @@ export default function Planning() {
   const [regions, setRegions] = useState<Region[]>([]);
   const [region, setRegion] = useState("");
   const [strategy, setStrategy] = useState("static_robust");
-  const [scenario, setScenario] = useState("2526");
+  const [scenario] = useState("2526");
   const [gamma, setGamma] = useState(10);
   const [budget, setBudget] = useState<number | null>(null);
   const [transportCostPerKm, setTransportCostPerKm] = useState(0.5);
@@ -424,7 +424,7 @@ export default function Planning() {
                         <span className="price-unit">BWP</span>
                         <button
                           className="btn-xs"
-                          style={{ color: "#f87171", borderColor: "rgba(239,68,68,0.25)", marginLeft: "0.2rem" }}
+                          style={{ color: "var(--k-f87171)", borderColor: "rgba(239,68,68,0.25)", marginLeft: "0.2rem" }}
                           title={`Remove ${p.product_code}`}
                           onClick={() => {
                             if (!window.confirm(`Remove "${p.description || p.product_code}"?`)) return;
@@ -560,7 +560,7 @@ export default function Planning() {
                             </button>
                             <button
                               className="btn-xs"
-                              style={{ color: "#f87171", borderColor: "rgba(239,68,68,0.25)" }}
+                              style={{ color: "var(--k-f87171)", borderColor: "rgba(239,68,68,0.25)" }}
                               onClick={() => setConfirmTarget(fac)}
                             >
                               remove
@@ -610,8 +610,8 @@ export default function Planning() {
               {pendingRemove && (
                 <div className="add-form" style={{ borderColor: "rgba(245,158,11,0.3)", marginBottom: "0.75rem" }}>
                   <h4 style={{ color: "#fbbf24" }}>Reroute Required</h4>
-                  <p style={{ fontSize: "0.75rem", color: "#94a3b8", marginBottom: "0.5rem" }}>
-                    Removing <strong style={{ color: "#e2e8f0" }}>{pendingRemove.name}</strong> will
+                  <p style={{ fontSize: "0.75rem", color: "var(--k-94a3b8)", marginBottom: "0.5rem" }}>
+                    Removing <strong style={{ color: "var(--k-e2e8f0)" }}>{pendingRemove.name}</strong> will
                     affect {pendingRemove.downstream.length} downstream facilities.
                     Choose a replacement hospital:
                   </p>
@@ -629,7 +629,7 @@ export default function Planning() {
                       </select>
                     </label>
                   ) : (
-                    <p style={{ fontSize: "0.75rem", color: "#f87171" }}>
+                    <p style={{ fontSize: "0.75rem", color: "var(--k-f87171)" }}>
                       No other hospitals in this region. Add a new hospital first.
                     </p>
                   )}
